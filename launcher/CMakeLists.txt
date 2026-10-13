@@ -325,6 +325,8 @@ set(MINECRAFT_SOURCES
     minecraft/mod/MetadataHandler.h
     minecraft/mod/LibraryIndex.h
     minecraft/mod/LibraryIndex.cpp
+    minecraft/mod/tasks/LibraryDownloadTask.h
+    minecraft/mod/tasks/LibraryDownloadTask.cpp
     minecraft/mod/Mod.h
     minecraft/mod/Mod.cpp
     minecraft/mod/ModDetails.h

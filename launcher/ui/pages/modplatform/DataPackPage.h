@@ -39,6 +39,7 @@ class DataPackResourcePage : public ResourcePage {
     inline QString resourceString() const override { return tr("data pack"); }
 
     bool supportsFiltering() const override { return false; };
+    bool supportsLibrary() const override { return false; };
 
     QMap<QString, QString> urlHandlers() const override;
 

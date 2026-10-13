@@ -8,6 +8,7 @@
 #include <QWidget>
 
 #include "ResourceDownloadTask.h"
+#include "minecraft/mod/LibraryIndex.h"
 #include "modplatform/ModIndex.h"
 
 #include "ui/pages/BasePage.h"
@@ -49,6 +50,11 @@ class ResourcePage : public QWidget, public BasePage {
 
     /* Features this resource's page supports */
     virtual bool supportsFiltering() const = 0;
+
+    /** Which kind of library entry the resources of this page are. Pages whose resources have no
+        library equivalent, such as data packs, report that through supportsLibrary(). */
+    virtual auto libraryType() const -> LibraryIndex::Type { return LibraryIndex::Type::Mod; }
+    virtual bool supportsLibrary() const { return true; }
 
     void retranslate() override;
     void openedImpl() override;
@@ -103,6 +109,12 @@ class ResourcePage : public QWidget, public BasePage {
         whether to install the closest available file anyway. Returns true if the caller should go
         ahead and add pack->versions.first() to the download list. */
     bool confirmIncompatibleVersion(ModPlatform::IndexedPack::Ptr pack);
+
+    /** Downloads the version selected in the dropdown into the user's library, so it can be
+        installed into any instance later without fetching it again. */
+    void onAddToLibrary();
+
+    void updateAddToLibraryButton(int comboIndex);
 
     /** Sends the user to the project's page for versions the API does not expose a download URL
         for, instead of queueing a download that cannot succeed. */

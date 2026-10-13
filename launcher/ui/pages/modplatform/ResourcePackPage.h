@@ -38,6 +38,7 @@ class ResourcePackResourcePage : public ResourcePage {
     inline QString resourceString() const override { return tr("resource pack"); }
 
     bool supportsFiltering() const override { return false; };
+    auto libraryType() const -> LibraryIndex::Type override { return LibraryIndex::Type::ResourcePack; };
 
     QMap<QString, QString> urlHandlers() const override;
 

@@ -38,6 +38,7 @@ class ShaderPackResourcePage : public ResourcePage {
     QString resourceString() const override { return tr("shader pack"); }
 
     bool supportsFiltering() const override { return false; };
+    auto libraryType() const -> LibraryIndex::Type override { return LibraryIndex::Type::ShaderPack; };
 
     void addResourceToPage(ModPlatform::IndexedPack::Ptr /*unused*/,
                            ModPlatform::IndexedVersion& /*unused*/,

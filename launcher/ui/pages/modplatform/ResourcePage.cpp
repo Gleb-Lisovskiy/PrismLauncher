@@ -54,6 +54,8 @@
 #include "minecraft/MinecraftInstance.h"
 #include "minecraft/PackProfile.h"
 #include "modplatform/ModIndex.h"
+#include "minecraft/mod/tasks/LibraryDownloadTask.h"
+#include "ui/dialogs/ProgressDialog.h"
 #include "ui/dialogs/ResourceDownloadDialog.h"
 #include "ui/pages/modplatform/ResourceModel.h"
 #include "ui/widgets/ProjectItem.h"
@@ -364,6 +366,10 @@ void ResourcePage::versionListUpdated(const QModelIndex& index)
         m_enableQueue.remove(index.row());
         onResourceToggle(index);
     }
+
+    // The combo was just repopulated, so its current index changed without emitting a signal;
+    // reflect that in the library button too.
+    updateAddToLibraryButton(m_ui->versionSelectionBox->currentIndex());
 }
 
 void ResourcePage::onSelectionChanged(QModelIndex curr, [[maybe_unused]] QModelIndex prev)
@@ -529,6 +535,67 @@ void ResourcePage::offerManualDownload(ModPlatform::IndexedPack::Ptr pack)
     }
 
     QDesktopServices::openUrl(QUrl(pack->websiteUrl));
+}
+
+void ResourcePage::updateAddToLibraryButton(int comboIndex)
+{
+    const int versionIndex = m_ui->versionSelectionBox->itemData(comboIndex).toInt();
+    const auto pack = getCurrentPack();
+
+    bool usable = versionIndex >= 0 && pack && versionIndex < pack->versions.size();
+    if (usable) {
+        // A version with no download URL cannot be fetched; the "open the project page" path is
+        // separate and stays available through the selection button.
+        usable = !pack->versions[versionIndex].downloadUrl.isEmpty();
+    }
+    m_ui->addToLibraryButton->setEnabled(usable);
+}
+
+void ResourcePage::onAddToLibrary()
+{
+    const int versionIndex = m_ui->versionSelectionBox->itemData(m_ui->versionSelectionBox->currentIndex()).toInt();
+    const auto pack = getCurrentPack();
+    if (!pack || versionIndex < 0 || versionIndex >= pack->versions.size()) {
+        return;
+    }
+
+    const auto& version = pack->versions[versionIndex];
+    if (version.downloadUrl.isEmpty()) {
+        offerManualDownload(pack);
+        return;
+    }
+
+    LibraryIndex::Entry entry;
+    entry.type = libraryType();
+    entry.details.mod_id = pack->slug;
+    entry.details.name = pack->name;
+    entry.details.version = version.version;
+    entry.details.mcversion = version.mcVersion.join(", ");
+    entry.details.description = pack->description;
+    entry.details.homeurl = pack->websiteUrl;
+    entry.projectId = pack->addonId.toString();
+    entry.fileId = version.fileId.toString();
+    entry.provider = pack->provider;
+
+    // LibraryDownloadTask keys the payload by file name; give it one now so the entry gets the same
+    // name whether it was added from here or from a file on disk.
+    if (!version.fileName.isEmpty()) {
+        entry.file = QString("files/%1/%2").arg(LibraryIndex::typeDirName(entry.type), version.fileName);
+    }
+
+    auto* library = APPLICATION->library();
+
+    const auto packName = pack->name;
+    auto* task = new LibraryDownloadTask(QUrl(version.downloadUrl), entry, library, this);
+    ProgressDialog dialog(this);
+    dialog.setSkipButton(true, tr("Abort"));
+    connect(task, &Task::succeeded, this, [this, packName] {
+        QMessageBox::information(this,
+                                  tr("Added to Library"),
+                                  tr("'%1' is now in your library. Open it from the Library button in the toolbar to install it into other instances.")
+                                      .arg(packName));
+    });
+    dialog.execWithTask(task);
 }
 
 bool ResourcePage::confirmIncompatibleVersion(ModPlatform::IndexedPack::Ptr pack)
@@ -698,6 +765,11 @@ void ResourcePage::openProject(const QVariant& projectID)
 
     connect(m_ui->versionSelectionBox, &QComboBox::currentIndexChanged, this,
             [this, okBtn](int index) { okBtn->setEnabled(m_ui->versionSelectionBox->itemData(index).toInt() >= 0); });
+
+    m_ui->addToLibraryButton->setVisible(supportsLibrary());
+    connect(m_ui->addToLibraryButton, &QPushButton::clicked, this, &ResourcePage::onAddToLibrary);
+    connect(m_ui->versionSelectionBox, &QComboBox::currentIndexChanged, this,
+            [this](int index) { updateAddToLibraryButton(index); });
 
     auto jump = [this] {
         if (m_model->rowCount({}) > 0) {
