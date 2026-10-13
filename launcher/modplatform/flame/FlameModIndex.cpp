@@ -18,7 +18,9 @@ QString FlameMod::guessDownloadUrl(const QString& fileId, const QString& fileNam
         return {};
     }
 
-    return QString("%1/files/%2/%3/%4")
+    // The scheme is required: FLAME_DOWNLOAD_HOST is a bare host, and a URL without one makes
+    // Qt fail with ProtocolUnknownError before it ever leaves the machine.
+    return QString("https://%1/files/%2/%3/%4")
         .arg(BuildConfig.FLAME_DOWNLOAD_HOST, fileId.left(4), fileId.mid(4), QString(QUrl::toPercentEncoding(fileName)));
 }
 
