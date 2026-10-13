@@ -110,7 +110,12 @@ Task::Ptr ResourceAPI::getProjectVersions(VersionSearchArgs&& args, Callback<QVe
                     file.addonId = args.pack->addonId;
                 }
 
-                if (file.fileId.isValid() && !file.downloadUrl.isEmpty()) {  // Heuristic to check if the returned value is valid
+                if (file.fileId.isValid()) {  // Heuristic to check if the returned value is valid
+                    // Note: an empty downloadUrl does NOT mean the entry is bogus. CurseForge
+                    // withholds it for projects that do not distribute through third-party
+                    // launchers, and such projects used to vanish from this list entirely,
+                    // leaving the user with an empty version dropdown and no way forward. Keep
+                    // them so the UI can say why they cannot be installed from here.
                     unsortedVersions.append(file);
                 }
             }

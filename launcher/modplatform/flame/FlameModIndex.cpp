@@ -2,12 +2,25 @@
 
 #include "FileSystem.h"
 #include "Json.h"
+#include "BuildConfig.h"
 #include "minecraft/MinecraftInstance.h"
 #include "minecraft/PackProfile.h"
 #include "modplatform/ModIndex.h"
 #include "modplatform/flame/FlameAPI.h"
 
 static FlameAPI api;
+
+QString FlameMod::guessDownloadUrl(const QString& fileId, const QString& fileName)
+{
+    static constexpr qsizetype kMinIdLength = 5;
+
+    if (fileId.length() < kMinIdLength || fileName.isEmpty()) {
+        return {};
+    }
+
+    return QString("%1/files/%2/%3/%4")
+        .arg(BuildConfig.FLAME_DOWNLOAD_HOST, fileId.left(4), fileId.mid(4), QString(QUrl::toPercentEncoding(fileName)));
+}
 
 void FlameMod::loadIndexedPack(ModPlatform::IndexedPack& pack, QJsonObject& obj)
 {
@@ -142,6 +155,13 @@ auto FlameMod::loadIndexedPackVersion(QJsonObject& obj, bool load_changelog) -> 
     file.downloadUrl = obj["downloadUrl"].toString();
     file.fileName = Json::requireString(obj, "fileName");
     file.fileName = FS::RemoveInvalidPathChars(file.fileName);
+
+    // CurseForge returns a null downloadUrl for files of projects that do not distribute through
+    // third-party launchers, which used to make those files invisible and uninstallable here. The
+    // CDN path is fully derivable from the file id, so build it instead of giving up.
+    if (file.downloadUrl.isEmpty() && file.fileId.isValid()) {
+        file.downloadUrl = guessDownloadUrl(file.fileId.toString(), file.fileName);
+    }
 
     ModPlatform::IndexedVersionType ver_type;
     switch (Json::requireInteger(obj, "releaseType")) {

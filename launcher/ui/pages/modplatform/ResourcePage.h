@@ -104,6 +104,10 @@ class ResourcePage : public QWidget, public BasePage {
         ahead and add pack->versions.first() to the download list. */
     bool confirmIncompatibleVersion(ModPlatform::IndexedPack::Ptr pack);
 
+    /** Sends the user to the project's page for versions the API does not expose a download URL
+        for, instead of queueing a download that cannot succeed. */
+    void offerManualDownload(ModPlatform::IndexedPack::Ptr pack);
+
     /** Associates regex expressions to pages in the order they're given in the map. */
     virtual QMap<QString, QString> urlHandlers() const = 0;
     virtual void openUrl(const QUrl&);

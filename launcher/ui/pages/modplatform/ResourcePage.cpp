@@ -292,6 +292,9 @@ void ResourcePage::updateSelectionButton()
         if (currentPack->versionsLoaded && currentPack->versions.empty()) {
             m_ui->resourceSelectionButton->setEnabled(false);
             qWarning() << tr("No version available for the selected pack");
+        } else if (m_selectedVersionIndex >= 0 && m_selectedVersionIndex < currentPack->versions.size() &&
+                   currentPack->versions[m_selectedVersionIndex].downloadUrl.isEmpty()) {
+            m_ui->resourceSelectionButton->setText(tr("Open the project page to download"));
         } else if (!currentPack->isVersionSelected(m_selectedVersionIndex)) {
             m_ui->resourceSelectionButton->setText(tr("Select %1 for download").arg(resourceString()));
         } else {
@@ -334,6 +337,9 @@ void ResourcePage::versionListUpdated(const QModelIndex& index)
                 }
                 if (!compatible) {
                     versionText += tr(" - not compatible with this instance");
+                }
+                if (version.downloadUrl.isEmpty()) {
+                    versionText += tr(" - not downloadable from here");
                 }
 
                 m_ui->versionSelectionBox->addItem(versionText, QVariant(i));
@@ -441,7 +447,14 @@ void ResourcePage::onResourceSelected()
     }
 
     auto& version = currentPack->versions[m_selectedVersionIndex];
-    Q_ASSERT(!version.downloadUrl.isNull());
+    if (version.downloadUrl.isEmpty()) {
+        // CurseForge withholds the download URL for projects that do not distribute through
+        // third-party launchers. There is nothing to queue here, so send the user to the source
+        // instead of failing later with an empty network request.
+        offerManualDownload(currentPack);
+        return;
+    }
+
     if (version.is_currently_selected) {
         removeResourceFromDialog(currentPack->name);
     } else {
@@ -473,8 +486,14 @@ void ResourcePage::onResourceToggle(const QModelIndex& index)
 
             if (version == pack->versions.end()) {
                 if (confirmIncompatibleVersion(pack)) {
-                    addResourceToDialog(pack, pack->versions.first());
+                    if (pack->versions.first().downloadUrl.isEmpty()) {
+                        offerManualDownload(pack);
+                    } else {
+                        addResourceToDialog(pack, pack->versions.first());
+                    }
                 }
+            } else if (version->downloadUrl.isEmpty()) {
+                offerManualDownload(pack);
             } else {
                 addResourceToDialog(pack, *version);
             }
@@ -498,6 +517,18 @@ void ResourcePage::onResourceToggle(const QModelIndex& index)
             m_model->loadEntry(index);
         }
     }
+}
+
+void ResourcePage::offerManualDownload(ModPlatform::IndexedPack::Ptr pack)
+{
+    if (pack->websiteUrl.isEmpty()) {
+        QMessageBox::warning(this,
+                             tr("Cannot download"),
+                             tr("'%1' does not allow downloads from third-party launchers and no project page is known.").arg(pack->name));
+        return;
+    }
+
+    QDesktopServices::openUrl(QUrl(pack->websiteUrl));
 }
 
 bool ResourcePage::confirmIncompatibleVersion(ModPlatform::IndexedPack::Ptr pack)
