@@ -323,6 +323,8 @@ set(MINECRAFT_SOURCES
     minecraft/WorldList.cpp
 
     minecraft/mod/MetadataHandler.h
+    minecraft/mod/LibraryIndex.h
+    minecraft/mod/LibraryIndex.cpp
     minecraft/mod/Mod.h
     minecraft/mod/Mod.cpp
     minecraft/mod/ModDetails.h
