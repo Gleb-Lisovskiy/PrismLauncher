@@ -177,6 +177,11 @@ struct IndexedPack {
     bool versionsLoaded = false;
     QList<IndexedVersion> versions;
 
+    // Set once the version list has been (re)fetched without the instance's version and loader
+    // filters. Some projects have no file matching the instance at all, and without this the
+    // fallback would be requested again on every selection change.
+    bool unfilteredVersionsLoaded = false;
+
     // Don't load by default, since some modplatform don't have that info
     bool extraDataLoaded = true;
     ExtraPackData extraData;

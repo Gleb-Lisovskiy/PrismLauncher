@@ -40,6 +40,8 @@ class ModModel : public ResourceModel {
     ResourceAPI::VersionSearchArgs createVersionsArguments(const QModelIndex&) override;
     ResourceAPI::ProjectInfoArgs createInfoArguments(const QModelIndex&) override;
 
+    void versionRequestSucceeded(QVector<ModPlatform::IndexedVersion>& doc, QVariant pack, const QModelIndex& index) override;
+
    protected:
     virtual bool isPackInstalled(ModPlatform::IndexedPack::Ptr) const override;
 
@@ -50,6 +52,14 @@ class ModModel : public ResourceModel {
     BaseInstance& m_base_instance;
 
     std::shared_ptr<ModFilterWidget::Filter> m_filter = nullptr;
+
+   private:
+    /** Builds the version request. With `filtered` false every version/loader constraint coming
+        from the instance is dropped, which is how the incompatible-versions fallback is done. */
+    auto createVersionsArgumentsFor(ModPlatform::IndexedPack::Ptr pack, bool filtered) const -> ResourceAPI::VersionSearchArgs;
+
+    /** Issues the unfiltered version request for a pack whose filtered request came back empty. */
+    void requestUnfilteredVersions(const QModelIndex& index, ModPlatform::IndexedPack::Ptr pack);
 
    private:
     QString m_debugName;

@@ -51,6 +51,9 @@
 #include "Markdown.h"
 
 #include "Application.h"
+#include "minecraft/MinecraftInstance.h"
+#include "minecraft/PackProfile.h"
+#include "modplatform/ModIndex.h"
 #include "ui/dialogs/ResourceDownloadDialog.h"
 #include "ui/pages/modplatform/ResourceModel.h"
 #include "ui/widgets/ProjectItem.h"
@@ -311,9 +314,14 @@ void ResourcePage::versionListUpdated(const QModelIndex& index)
         if (currentPack) {
             auto installedVersion = m_model->getInstalledPackVersion(currentPack);
 
+            // When the version list had to be fetched unfiltered, none of the entries may match
+            // this instance. Showing them anyway beats an empty dropdown with no explanation.
+            const bool showIncompatible = currentPack->unfilteredVersionsLoaded;
+
             for (int i = 0; i < currentPack->versions.size(); i++) {
                 auto& version = currentPack->versions[i];
-                if (!m_model->checkVersionFilters(version)) {
+                const bool compatible = m_model->checkVersionFilters(version);
+                if (!compatible && !showIncompatible) {
                     continue;
                 }
 
@@ -324,12 +332,19 @@ void ResourcePage::versionListUpdated(const QModelIndex& index)
                 if (version.fileId == installedVersion) {
                     versionText += tr(" [installed]", "Mod version select");
                 }
+                if (!compatible) {
+                    versionText += tr(" - not compatible with this instance");
+                }
 
                 m_ui->versionSelectionBox->addItem(versionText, QVariant(i));
             }
         }
         if (m_ui->versionSelectionBox->count() == 0) {
-            m_ui->versionSelectionBox->addItem(tr("No valid version found."), QVariant(-1));
+            if (currentPack && currentPack->unfilteredVersionsLoaded) {
+                m_ui->versionSelectionBox->addItem(tr("This project has no downloadable files."), QVariant(-1));
+            } else {
+                m_ui->versionSelectionBox->addItem(tr("No valid version found."), QVariant(-1));
+            }
             m_ui->resourceSelectionButton->setText(tr("Cannot select invalid version :("));
         }
 
@@ -457,12 +472,9 @@ void ResourcePage::onResourceToggle(const QModelIndex& index)
             });
 
             if (version == pack->versions.end()) {
-                auto* errorMessage = new QMessageBox(
-                    QMessageBox::Warning, tr("No versions available"),
-                    tr("No versions for '%1' are available.\nThe author likely blocked third-party launchers.").arg(pack->name),
-                    QMessageBox::Ok, this);
-
-                errorMessage->open();
+                if (confirmIncompatibleVersion(pack)) {
+                    addResourceToDialog(pack, pack->versions.first());
+                }
             } else {
                 addResourceToDialog(pack, *version);
             }
@@ -486,6 +498,72 @@ void ResourcePage::onResourceToggle(const QModelIndex& index)
             m_model->loadEntry(index);
         }
     }
+}
+
+bool ResourcePage::confirmIncompatibleVersion(ModPlatform::IndexedPack::Ptr pack)
+{
+    if (pack->versions.isEmpty()) {
+        auto* errorMessage = new QMessageBox(QMessageBox::Warning,
+                                             tr("No versions available"),
+                                             tr("No versions for '%1' are available.\nThe author likely blocked third-party launchers.")
+                                                 .arg(pack->name),
+                                             QMessageBox::Ok,
+                                             this);
+        errorMessage->open();
+        return false;
+    }
+
+    if (!pack->unfilteredVersionsLoaded) {
+        return false;
+    }
+
+    const auto& candidate = pack->versions.first();
+
+    QString fileLoaders;
+    {
+        QStringList names;
+        for (auto loader : ModPlatform::modLoaderTypesToList(candidate.loaders)) {
+            names << ModPlatform::getModLoaderAsString(loader);
+        }
+        fileLoaders = names.isEmpty() ? tr("unknown loader") : names.join(", ");
+    }
+
+    QString instanceInfo = tr("this instance");
+    if (auto* instance = dynamic_cast<MinecraftInstance*>(&m_baseInstance)) {
+        if (auto profile = instance->getPackProfile()) {
+            QStringList loaders;
+            if (auto instanceLoaders = profile->getSupportedModLoaders()) {
+                for (auto loader : ModPlatform::modLoaderTypesToList(*instanceLoaders)) {
+                    loaders << ModPlatform::getModLoaderAsString(loader);
+                }
+            }
+            const auto mcVersion = profile->getComponentVersion("net.minecraft");
+            instanceInfo = mcVersion.isEmpty() ? tr("this instance")
+                                               : tr("Minecraft %1%2").arg(mcVersion,
+                                                                           loaders.isEmpty() ? QString() : tr(" (%1)").arg(loaders.join(", ")));
+        }
+    }
+
+    auto* confirm = new QMessageBox(QMessageBox::Warning,
+                                    tr("Install an incompatible version?"),
+                                    tr("'%1' has no file matching %2.\n\nThe closest available file is %3, which targets %4 for Minecraft %5.\n\n"
+                                       "Installing it anyway will most likely make the game or the launcher crash. Install it?")
+                                        .arg(pack->name,
+                                             instanceInfo,
+                                             candidate.version,
+                                             fileLoaders,
+                                             candidate.mcVersion.isEmpty() ? tr("an unknown version") : candidate.mcVersion.join(", ")),
+                                    QMessageBox::Yes | QMessageBox::No,
+                                    this);
+    confirm->setDefaultButton(QMessageBox::No);
+
+    if (confirm->exec() == QMessageBox::Yes) {
+        confirm->deleteLater();
+        return true;
+    }
+
+    confirm->deleteLater();
+    return false;
 }
 
 void ResourcePage::openUrl(const QUrl& url)

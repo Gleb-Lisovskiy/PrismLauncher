@@ -49,20 +49,76 @@ ResourceAPI::SearchArgs ModModel::createSearchArguments()
 
 ResourceAPI::VersionSearchArgs ModModel::createVersionsArguments(const QModelIndex& entry)
 {
-    auto pack = m_packs[entry.row()];
+    return createVersionsArgumentsFor(m_packs[entry.row()], /*filtered=*/true);
+}
+
+ResourceAPI::VersionSearchArgs ModModel::createVersionsArgumentsFor(ModPlatform::IndexedPack::Ptr pack, bool filtered) const
+{
     auto profile = static_cast<MinecraftInstance const&>(m_base_instance).getPackProfile();
 
     Q_ASSERT(profile);
     Q_ASSERT(m_filter);
 
     std::optional<std::vector<Version>> versions{};
+
+    if (!filtered) {
+        // Drop every instance-side constraint so the API answers with whatever the project has.
+        std::optional<ModPlatform::ModLoaderTypes> noLoaders{};
+        return { std::move(pack), versions, noLoaders, ModPlatform::ResourceType::Mod };
+    }
+
     auto loaders = profile->getSupportedModLoaders();
     if (!m_filter->versions.empty())
         versions = m_filter->versions;
     if (m_filter->loaders)
         loaders = m_filter->loaders;
 
-    return { pack, versions, loaders, ModPlatform::ResourceType::Mod };
+    return { std::move(pack), versions, loaders, ModPlatform::ResourceType::Mod };
+}
+
+void ModModel::versionRequestSucceeded(QVector<ModPlatform::IndexedVersion>& doc, QVariant pack, const QModelIndex& index)
+{
+    auto currentPack = data(index, Qt::UserRole).value<ModPlatform::IndexedPack::Ptr>();
+
+    if (!currentPack || pack != currentPack->addonId) {
+        return;
+    }
+
+    // The API filters by this instance's Minecraft version and mod loader before answering, so an
+    // empty list here does not mean the project has no files at all. It means it ships none for
+    // this combination, which is routine for mods that dropped a game version or were only ever
+    // published for another loader. Retry unfiltered so the user sees what does exist instead of
+    // an empty dropdown.
+    if (doc.isEmpty() && !currentPack->unfilteredVersionsLoaded) {
+        currentPack->unfilteredVersionsLoaded = true;
+        requestUnfilteredVersions(index, std::move(currentPack));
+        return;
+    }
+
+    ResourceModel::versionRequestSucceeded(doc, pack, index);
+}
+
+void ModModel::requestUnfilteredVersions(const QModelIndex& index, ModPlatform::IndexedPack::Ptr pack)
+{
+    auto args = createVersionsArgumentsFor(pack, /*filtered=*/false);
+    auto addonId = pack->addonId;
+
+    ResourceAPI::Callback<QVector<ModPlatform::IndexedVersion>> callbacks{};
+    callbacks.on_succeed = [this, index, addonId](auto& doc) {
+        if (!s_running_models.constFind(this).value()) {
+            return;
+        }
+        // Deliberately the base implementation: this list is the final answer, and going back
+        // through ModModel would trigger the fallback again.
+        ResourceModel::versionRequestSucceeded(doc, addonId, index);
+    };
+    callbacks.on_fail = [](const QString& reason, int) {
+        QMessageBox::critical(nullptr, tr("Error"), tr("A network error occurred. Could not load project versions: %1").arg(reason));
+    };
+
+    if (auto job = m_api->getProjectVersions(std::move(args), std::move(callbacks)); job) {
+        runInfoJob(job);
+    }
 }
 
 ResourceAPI::ProjectInfoArgs ModModel::createInfoArguments(const QModelIndex& entry)

@@ -88,6 +88,10 @@ class ResourceModel : public QAbstractListModel {
     /** Schedule a refresh, clearing the current state. */
     void refresh();
 
+    /** Called when the version list for the given entry arrived. Subclasses may intercept this to
+        post-process the list before it reaches the UI. */
+    virtual void versionRequestSucceeded(QVector<ModPlatform::IndexedVersion>& doc, QVariant pack, const QModelIndex& index);
+
     /** Gets the icon at the URL for the given index. If it's not fetched yet, fetch it and update when fisinhed. */
     std::optional<QIcon> getIcon(QModelIndex&, const QUrl&);
 
@@ -141,8 +145,6 @@ class ResourceModel : public QAbstractListModel {
     void searchRequestForOneSucceeded(ModPlatform::IndexedPack::Ptr);
     void searchRequestFailed(QString reason, int network_error_code);
     void searchRequestAborted();
-
-    void versionRequestSucceeded(QVector<ModPlatform::IndexedVersion>&, QVariant, const QModelIndex&);
 
     void infoRequestSucceeded(ModPlatform::IndexedPack::Ptr, const QModelIndex&);
 

@@ -99,6 +99,11 @@ class ResourcePage : public QWidget, public BasePage {
     void onResourceSelected();
     void onResourceToggle(const QModelIndex& index);
 
+    /** Called when no version of a project matches this instance. Explains the situation and asks
+        whether to install the closest available file anyway. Returns true if the caller should go
+        ahead and add pack->versions.first() to the download list. */
+    bool confirmIncompatibleVersion(ModPlatform::IndexedPack::Ptr pack);
+
     /** Associates regex expressions to pages in the order they're given in the map. */
     virtual QMap<QString, QString> urlHandlers() const = 0;
     virtual void openUrl(const QUrl&);
