@@ -42,6 +42,8 @@
 
 #include "Application.h"
 #include "BuildConfig.h"
+#include "FileSystem.h"
+#include "minecraft/mod/LibraryIndex.h"
 
 #include "DataMigrationTask.h"
 #include "java/JavaInstallList.h"
@@ -1267,6 +1269,20 @@ bool Application::createSetupWizard()
     }
 
     return wizardRequired || login;
+}
+
+LibraryIndex* Application::library() const
+{
+    if (!m_library) {
+        m_library = std::make_unique<LibraryIndex>(FS::PathCombine(dataRoot(), "library"));
+        // A malformed manifest must not stop the launcher from starting; the library opens empty
+        // and says why.
+        QString error;
+        if (!m_library->load(&error)) {
+            qWarning() << "Could not read the library manifest:" << error;
+        }
+    }
+    return m_library.get();
 }
 
 bool Application::updaterEnabled()

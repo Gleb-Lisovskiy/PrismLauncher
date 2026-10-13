@@ -50,6 +50,7 @@
 #include "QObjectPtr.h"
 
 #include "minecraft/auth/MinecraftAccount.h"
+#include "minecraft/mod/LibraryIndex.h"
 
 class LaunchController;
 class LocalPeer;
@@ -119,6 +120,12 @@ class Application : public QApplication {
 
     SettingsObject* settings() const { return m_settings.get(); }
 
+    /** The user's shared library of reusable local resources, created on first use.
+     *
+     *  Lives in <data root>/library, next to the other launcher-managed directories. Created
+     *  lazily so that a headless or library-only run does not touch the disk for it. */
+    LibraryIndex* library() const;
+
     qint64 timeSinceStart() const { return m_startTime.msecsTo(QDateTime::currentDateTime()); }
 
     QIcon logo();
@@ -172,7 +179,7 @@ class Application : public QApplication {
     const QString& root() { return m_rootPath; }
 
     /// the data path the application is using
-    const QString& dataRoot() { return m_dataPath; }
+    const QString& dataRoot() const { return m_dataPath; }
 
     /// the java installed path the application is using
     const QString javaPath();
@@ -255,6 +262,8 @@ class Application : public QApplication {
 
     std::unique_ptr<HttpMetaCache> m_metacache;
     std::unique_ptr<Meta::Index> m_metadataIndex;
+
+    mutable std::unique_ptr<LibraryIndex> m_library;
 
     std::unique_ptr<SettingsObject> m_settings;
     std::unique_ptr<InstanceList> m_instances;

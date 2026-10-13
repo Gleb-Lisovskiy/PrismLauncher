@@ -348,6 +348,28 @@ bool LibraryIndex::remove(const QString& id, QString* error)
     return save(error);
 }
 
+bool LibraryIndex::update(const Entry& entry, QString* error)
+{
+    auto* existing = find(entry.id);
+    if (!existing) {
+        if (error) {
+            *error = QObject::tr("No such library entry: %1").arg(entry.id);
+        }
+        return false;
+    }
+
+    existing->details = entry.details;
+
+    if (!save(error)) {
+        return false;
+    }
+
+    // A renamed or re-versioned entry could in principle point at a different payload, though the
+    // path is untouched here, so re-check instead of trusting the flag set at load time.
+    flagMissingFiles();
+    return true;
+}
+
 LibraryIndex::Entry* LibraryIndex::find(const QString& id)
 {
     const auto it = std::find_if(m_entries.begin(), m_entries.end(), [&id](const Entry& e) { return e.id == id; });

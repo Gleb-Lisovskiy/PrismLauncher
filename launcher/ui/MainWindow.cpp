@@ -95,6 +95,7 @@
 #include "ui/GuiUtil.h"
 #include "ui/ViewLogWindow.h"
 #include "ui/dialogs/AboutDialog.h"
+#include "ui/dialogs/LibraryDialog.h"
 #include "ui/dialogs/CopyInstanceDialog.h"
 #include "ui/dialogs/CreateShortcutDialog.h"
 #include "ui/dialogs/CustomMessageBox.h"
@@ -1474,6 +1475,17 @@ void MainWindow::newsButtonClicked()
 void MainWindow::onCatChanged(int)
 {
     setCatBackground(APPLICATION->settings()->get("TheCat").toBool());
+}
+
+void MainWindow::on_actionLibrary_triggered()
+{
+    // Modal rather than modeless: the library edits shared files, and leaving two copies of the
+    // manifest open in the same process is more trouble than it is worth.
+    LibraryDialog dialog(this);
+    if (m_selectedInstance) {
+        dialog.selectInstance(m_selectedInstance->id());
+    }
+    dialog.exec();
 }
 
 void MainWindow::on_actionAbout_triggered()

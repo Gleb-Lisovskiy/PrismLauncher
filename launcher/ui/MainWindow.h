@@ -94,6 +94,8 @@ class MainWindow : public QMainWindow {
 
     void on_actionAbout_triggered();
 
+    void on_actionLibrary_triggered();
+
     void on_actionAddInstance_triggered();
 
     void on_actionREDDIT_triggered();

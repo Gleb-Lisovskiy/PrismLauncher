@@ -89,6 +89,14 @@ class LibraryIndex {
     /** Removes an entry and, if no other entry references it, its payload. */
     bool remove(const QString& id, QString* error = nullptr);
 
+    /** Replaces the description and metadata of an existing entry, keeping its identity.
+     *
+     *  Only the descriptive fields are taken from the argument; id, payload path and source are
+     *  kept, because those decide which file the entry points at and where it came from - and
+     *  changing them here would desynchronise the description from the payload. Returns false for
+     *  an unknown id. */
+    bool update(const Entry& entry, QString* error = nullptr);
+
     [[nodiscard]] Entry* find(const QString& id);
     [[nodiscard]] const Entry* find(const QString& id) const;
 
