@@ -1069,9 +1069,13 @@ SET(LAUNCHER_SOURCES
     ui/dialogs/IconPickerDialog.h
     ui/dialogs/ImportResourceDialog.cpp
     ui/dialogs/ImportResourceDialog.h
+    modplatform/library/LibraryAPI.cpp
+    modplatform/library/LibraryAPI.h
     ui/dialogs/LibraryDialog.cpp
     ui/dialogs/LibraryDialog.h
     ui/pages/library/LibraryModel.cpp
+    ui/pages/modplatform/library/LocalResourcePage.cpp
+    ui/pages/modplatform/library/LocalResourcePage.h
     ui/pages/library/LibraryModel.h
     ui/dialogs/MSALoginDialog.cpp
     ui/dialogs/MSALoginDialog.h

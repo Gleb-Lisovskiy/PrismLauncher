@@ -42,6 +42,7 @@
 #include "ui/pages/modplatform/ResourcePage.h"
 
 #include "ui/pages/modplatform/flame/FlameResourcePages.h"
+#include "ui/pages/modplatform/library/LocalResourcePage.h"
 #include "ui/pages/modplatform/modrinth/ModrinthResourcePages.h"
 
 #include "modplatform/flame/FlameAPI.h"
@@ -142,6 +143,7 @@ void ResourceDownloadDialog::connectButtons()
     auto* okButton = m_buttons.button(QDialogButtonBox::Ok);
     okButton->setToolTip(
         tr("Opens a new popup to review your selected %1 and confirm your selection. Shortcut: Ctrl+Return").arg(resourcesString()));
+
     connect(okButton, &QPushButton::clicked, this, &ResourceDownloadDialog::confirm);
 
     auto* cancelButton = m_buttons.button(QDialogButtonBox::Cancel);
@@ -305,7 +307,10 @@ QList<BasePage*> ModDownloadDialog::getPages()
 {
     QList<BasePage*> pages;
 
-    auto loaders = static_cast<MinecraftInstance*>(m_instance)->getPackProfile()->getSupportedModLoaders().value_or(ModPlatform::ModLoaderTypes(0));
+    pages.append(LocalModPage::create(this, *static_cast<MinecraftInstance*>(m_instance), APPLICATION->library()));
+
+    auto loaders =
+        static_cast<MinecraftInstance*>(m_instance)->getPackProfile()->getSupportedModLoaders().value_or(ModPlatform::ModLoaderTypes(0));
 
     if (ModrinthAPI::validateModLoaders(loaders)) {
         auto* page = ModrinthModPage::create(this, *m_instance);
@@ -355,6 +360,8 @@ ResourcePackDownloadDialog::ResourcePackDownloadDialog(QWidget* parent,
 QList<BasePage*> ResourcePackDownloadDialog::getPages()
 {
     QList<BasePage*> pages;
+
+    pages.append(LocalResourcePackPage::create(this, *static_cast<MinecraftInstance*>(m_instance), APPLICATION->library()));
 
     auto* modrinthPage = ModrinthResourcePackPage::create(this, *m_instance);
     modrinthPage->setSuppressInitialSearch(m_suppressInitialSearch);
@@ -419,6 +426,8 @@ ShaderPackDownloadDialog::ShaderPackDownloadDialog(QWidget* parent,
 QList<BasePage*> ShaderPackDownloadDialog::getPages()
 {
     QList<BasePage*> pages;
+    pages.append(LocalShaderPackPage::create(this, *static_cast<MinecraftInstance*>(m_instance), APPLICATION->library()));
+
     auto* modrinthPage = ModrinthShaderPackPage::create(this, *m_instance);
     modrinthPage->setSuppressInitialSearch(m_suppressInitialSearch);
     pages.append(modrinthPage);

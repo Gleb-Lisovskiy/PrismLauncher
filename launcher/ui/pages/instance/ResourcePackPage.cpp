@@ -38,8 +38,6 @@
 #include "ResourcePackPage.h"
 
 #include "ui/dialogs/CustomMessageBox.h"
-#include "minecraft/mod/LibraryIndex.h"
-#include "ui/dialogs/LibraryDialog.h"
 #include "ui/dialogs/ProgressDialog.h"
 #include "ui/dialogs/ResourceDownloadDialog.h"
 #include "ui/dialogs/ResourceUpdateDialog.h"
@@ -48,16 +46,11 @@ ResourcePackPage::ResourcePackPage(MinecraftInstance* instance, ResourcePackFold
     : ExternalResourcesPage(instance, model, parent), m_model(model)
 {
     ui->actionDownloadItem->setText(tr("Download Packs"));
-    ui->actionDownloadItem->setToolTip(tr("Download resource packs from online mod platforms"));
+    ui->actionDownloadItem->setToolTip(tr("Get resource packs from your local files folder or from online mod platforms"));
     ui->actionDownloadItem->setEnabled(true);
     ui->actionsToolbar->insertActionBefore(ui->actionAddItem, ui->actionDownloadItem);
 
     connect(ui->actionDownloadItem, &QAction::triggered, this, &ResourcePackPage::downloadResourcePacks);
-
-    m_installFromLibrary = new QAction(tr("Install Local Packs"), this);
-    m_installFromLibrary->setToolTip(tr("Install resource packs you keep in your local files folder"));
-    ui->actionsToolbar->insertActionBefore(ui->actionAddItem, m_installFromLibrary);
-    connect(m_installFromLibrary, &QAction::triggered, this, &ResourcePackPage::installFromLibrary);
 
     ui->actionUpdateItem->setToolTip(tr("Try to check or update all selected resource packs (all resource packs if none are selected)"));
     connect(ui->actionUpdateItem, &QAction::triggered, this, &ResourcePackPage::updateResourcePacks);
@@ -84,14 +77,6 @@ void ResourcePackPage::updateFrame(const QModelIndex& current, [[maybe_unused]] 
     int row = sourceCurrent.row();
     auto& rp = m_model->at(row);
     ui->frame->updateWithResourcePack(rp);
-}
-
-void ResourcePackPage::installFromLibrary()
-{
-    LibraryDialog dialog(this);
-    dialog.setTypeFilter(LibraryIndex::Type::ResourcePack);
-    dialog.setFixedInstance(m_instance->id());
-    dialog.exec();
 }
 
 void ResourcePackPage::downloadResourcePacks()

@@ -65,7 +65,6 @@ class ResourcePackPage : public ExternalResourcesPage {
 
    private slots:
     void downloadResourcePacks();
-    void installFromLibrary();
     void downloadDialogFinished(int result);
     void updateResourcePacks();
     void deleteResourcePackMetadata();
@@ -74,5 +73,4 @@ class ResourcePackPage : public ExternalResourcesPage {
    protected:
     ResourcePackFolderModel* m_model;
     QPointer<ResourceDownload::ResourceDownloadDialog> m_downloadDialog;
-    QAction* m_installFromLibrary = nullptr;
 };

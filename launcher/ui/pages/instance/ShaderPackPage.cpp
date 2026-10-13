@@ -43,8 +43,6 @@
 #include "minecraft/mod/ShaderPackFolderModel.h"
 
 #include "ui/dialogs/CustomMessageBox.h"
-#include "minecraft/mod/LibraryIndex.h"
-#include "ui/dialogs/LibraryDialog.h"
 #include "ui/dialogs/ProgressDialog.h"
 #include "ui/dialogs/ResourceDownloadDialog.h"
 #include "ui/dialogs/ResourceUpdateDialog.h"
@@ -53,16 +51,11 @@ ShaderPackPage::ShaderPackPage(MinecraftInstance* instance, ShaderPackFolderMode
     : ExternalResourcesPage(instance, model, parent), m_model(model)
 {
     ui->actionDownloadItem->setText(tr("Download Packs"));
-    ui->actionDownloadItem->setToolTip(tr("Download shader packs from online mod platforms"));
+    ui->actionDownloadItem->setToolTip(tr("Get shader packs from your local files folder or from online mod platforms"));
     ui->actionDownloadItem->setEnabled(true);
     ui->actionsToolbar->insertActionBefore(ui->actionAddItem, ui->actionDownloadItem);
 
     connect(ui->actionDownloadItem, &QAction::triggered, this, &ShaderPackPage::downloadShaderPack);
-
-    m_installFromLibrary = new QAction(tr("Install Local Packs"), this);
-    m_installFromLibrary->setToolTip(tr("Install shader packs you keep in your local files folder"));
-    ui->actionsToolbar->insertActionBefore(ui->actionAddItem, m_installFromLibrary);
-    connect(m_installFromLibrary, &QAction::triggered, this, &ShaderPackPage::installFromLibrary);
 
     ui->actionUpdateItem->setToolTip(tr("Try to check or update all selected shader packs (all shader packs if none are selected)"));
     connect(ui->actionUpdateItem, &QAction::triggered, this, &ShaderPackPage::updateShaderPacks);
@@ -81,14 +74,6 @@ ShaderPackPage::ShaderPackPage(MinecraftInstance* instance, ShaderPackFolderMode
     ui->actionChangeVersion->setToolTip(tr("Change a shader pack's version."));
     connect(ui->actionChangeVersion, &QAction::triggered, this, &ShaderPackPage::changeShaderPackVersion);
     ui->actionsToolbar->insertActionAfter(ui->actionUpdateItem, ui->actionChangeVersion);
-}
-
-void ShaderPackPage::installFromLibrary()
-{
-    LibraryDialog dialog(this);
-    dialog.setTypeFilter(LibraryIndex::Type::ShaderPack);
-    dialog.setFixedInstance(m_instance->id());
-    dialog.exec();
 }
 
 void ShaderPackPage::downloadShaderPack()

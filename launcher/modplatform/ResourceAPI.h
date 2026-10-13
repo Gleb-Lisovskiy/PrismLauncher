@@ -119,7 +119,7 @@ class ResourceAPI {
     virtual std::pair<Task::Ptr, QByteArray*> getProjects(QStringList addonIds) const = 0;
 
     virtual Task::Ptr getProjectInfo(ProjectInfoArgs&&, Callback<ModPlatform::IndexedPack::Ptr>&&, bool askRetry = true) const;
-    Task::Ptr getProjectVersions(VersionSearchArgs&& args, Callback<QVector<ModPlatform::IndexedVersion>>&& callbacks) const;
+    virtual Task::Ptr getProjectVersions(VersionSearchArgs&& args, Callback<QVector<ModPlatform::IndexedVersion>>&& callbacks) const;
     virtual Task::Ptr getDependencyVersion(DependencySearchArgs&&, Callback<ModPlatform::IndexedVersion>&&) const;
 
    protected:

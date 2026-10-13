@@ -56,7 +56,6 @@ class ShaderPackPage : public ExternalResourcesPage {
 
    public slots:
     void downloadShaderPack();
-    void installFromLibrary();
     void downloadDialogFinished(int result);
     void updateShaderPacks();
     void deleteShaderPackMetadata();
@@ -65,5 +64,4 @@ class ShaderPackPage : public ExternalResourcesPage {
    private:
     ShaderPackFolderModel* m_model;
     QPointer<ResourceDownload::ShaderPackDownloadDialog> m_downloadDialog;
-    QAction* m_installFromLibrary = nullptr;
 };
