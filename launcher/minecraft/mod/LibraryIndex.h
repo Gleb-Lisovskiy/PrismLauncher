@@ -118,6 +118,9 @@ class LibraryIndex {
 
     void flagMissingFiles();
 
+    /** Picks up files that were placed in a type directory without going through add(). */
+    [[nodiscard]] bool discoverUnlistedFiles();
+
     [[nodiscard]] static QJsonObject toJson(const Entry& entry);
     [[nodiscard]] static Entry fromJson(const QJsonObject& obj);
 

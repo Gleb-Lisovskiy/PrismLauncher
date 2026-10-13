@@ -14,9 +14,19 @@ class LibraryIndexTest : public QObject {
    private:
     QTemporaryDir m_dir;
 
+    /** A private directory per test method.
+     *
+     *  m_dir is shared by every test in the class, and load() now discovers files that were placed
+     *  in the type directories without going through add(). Without a per-test root, leftovers
+     *  from an earlier test would show up in the next one's counts. */
+    QString uniqueDir() const { return FS::PathCombine(m_dir.path(), QTest::currentTestFunction()); }
+
+    QString libraryDir() const { return FS::PathCombine(uniqueDir(), "localfiles"); }
+
     QString writeSource(const QString& name, const QByteArray& contents)
     {
-        const QString path = FS::PathCombine(m_dir.path(), "src-" + name);
+        QDir().mkpath(uniqueDir());
+        const QString path = FS::PathCombine(uniqueDir(), "src-" + name);
         QFile file(path);
         if (file.open(QIODevice::WriteOnly)) {
             file.write(contents);
@@ -43,7 +53,7 @@ class LibraryIndexTest : public QObject {
    private slots:
     void testEmptyLibraryIsNotAnError()
     {
-        LibraryIndex lib(FS::PathCombine(m_dir.path(), "localfiles"));
+        LibraryIndex lib(libraryDir());
         QVERIFY(lib.load());
         QVERIFY(lib.empty());
         QCOMPARE(lib.size(), 0);
@@ -51,7 +61,7 @@ class LibraryIndexTest : public QObject {
 
     void testAddStoresPayloadAndManifest()
     {
-        LibraryIndex lib(FS::PathCombine(m_dir.path(), "localfiles"));
+        LibraryIndex lib(libraryDir());
         const QString src = writeSource("thing.jar", "payload-one");
 
         auto entry = makeEntry("thing", "Thing");
@@ -76,7 +86,7 @@ class LibraryIndexTest : public QObject {
 
     void testSameModDifferentVersionsCoexist()
     {
-        LibraryIndex lib(FS::PathCombine(m_dir.path(), "localfiles"));
+        LibraryIndex lib(libraryDir());
         QString error;
 
         auto v1 = makeEntry("thing", "Thing", LibraryIndex::Type::Mod, "1.0.0");
@@ -97,7 +107,7 @@ class LibraryIndexTest : public QObject {
 
     void testRoundTrip()
     {
-        const QString root = FS::PathCombine(m_dir.path(), "localfiles");
+        const QString root = libraryDir();
         const QString src = writeSource("thing.jar", "payload-one");
 
         QString error;
@@ -123,7 +133,7 @@ class LibraryIndexTest : public QObject {
 
     void testReAddingSameVersionWithNewFileNameDropsOldPayload()
     {
-        LibraryIndex lib(FS::PathCombine(m_dir.path(), "localfiles"));
+        LibraryIndex lib(libraryDir());
         QString error;
 
         auto first = makeEntry("thing", "Thing");
@@ -141,7 +151,7 @@ class LibraryIndexTest : public QObject {
 
     void testReAddingUnderTheSameFileNameReusesThePath()
     {
-        LibraryIndex lib(FS::PathCombine(m_dir.path(), "localfiles"));
+        LibraryIndex lib(libraryDir());
         QString error;
 
         auto first = makeEntry("thing", "Thing");
@@ -181,7 +191,7 @@ class LibraryIndexTest : public QObject {
 
     void testFallsBackToFileNameWhenNoModId()
     {
-        LibraryIndex lib(FS::PathCombine(m_dir.path(), "localfiles"));
+        LibraryIndex lib(libraryDir());
         QString error;
         // The identity comes from the source file's name, which is what gets stored.
         const QString src = writeSource("thing.jar", "payload");
@@ -193,7 +203,7 @@ class LibraryIndexTest : public QObject {
 
     void testRemoveDropsPayloadAndManifest()
     {
-        LibraryIndex lib(FS::PathCombine(m_dir.path(), "localfiles"));
+        LibraryIndex lib(libraryDir());
         QString error;
         auto entry = makeEntry("thing", "Thing");
         QVERIFY2(lib.add(entry, writeSource("thing.jar", "payload"), &error), qPrintable(error));
@@ -212,7 +222,7 @@ class LibraryIndexTest : public QObject {
 
     void testMissingPayloadIsFlaggedNotDropped()
     {
-        const QString root = FS::PathCombine(m_dir.path(), "localfiles");
+        const QString root = libraryDir();
         QString error;
         {
             LibraryIndex lib(root);
@@ -230,9 +240,59 @@ class LibraryIndexTest : public QObject {
         QVERIFY(reopened.entries().first().broken);
     }
 
+    void testFilesDroppedIntoTheFolderArePickedUp()
+    {
+        const QString root = libraryDir();
+
+        // Simulate a user copying a jar into the folder by hand instead of using the dialog.
+        QVERIFY(QDir(FS::PathCombine(root, "mods")).mkpath("."));
+        QVERIFY(QDir(FS::PathCombine(root, "shaderpacks")).mkpath("."));
+        for (const auto& [dirName, fileName] : { std::pair{ "mods", "handmade.jar" }, std::pair{ "shaderpacks", "glow.zip" } }) {
+            QFile file(FS::PathCombine(FS::PathCombine(root, dirName), fileName));
+            QVERIFY(file.open(QIODevice::WriteOnly));
+            file.write("data");
+        }
+
+        LibraryIndex lib(root);
+        QVERIFY(lib.load());
+        QCOMPARE(lib.size(), 2);
+
+        const auto* mod = lib.find(LibraryIndex::makeId(LibraryIndex::Type::Mod, ModDetails(), "handmade.jar"));
+        QVERIFY(mod);
+        QCOMPARE(mod->file, QString("mods/handmade.jar"));
+        QCOMPARE(mod->details.name, QString("handmade"));
+        QVERIFY(!mod->broken);
+
+        const auto* shader = lib.find(LibraryIndex::makeId(LibraryIndex::Type::ShaderPack, ModDetails(), "glow.zip"));
+        QVERIFY(shader);
+        QCOMPARE(shader->type, LibraryIndex::Type::ShaderPack);
+
+        // And the discovery is written back, so it does not happen again on every load.
+        LibraryIndex reopened(root);
+        QVERIFY(reopened.load());
+        QCOMPARE(reopened.size(), 2);
+        QVERIFY(QFileInfo::exists(reopened.manifestPath()));
+    }
+
+    void testDiscoveryDoesNotDuplicateOrResurrectRemovedEntries()
+    {
+        LibraryIndex lib(libraryDir());
+        QString error;
+        auto entry = makeEntry("thing", "Thing");
+        QVERIFY2(lib.add(entry, writeSource("thing.jar", "payload"), &error), qPrintable(error));
+
+        const QString id = lib.find(LibraryIndex::makeId(LibraryIndex::Type::Mod, entry.details, "thing.jar"))->id;
+        QVERIFY2(lib.remove(id, &error), qPrintable(error));
+
+        // remove() deletes the payload too, so a reload must not resurrect it.
+        LibraryIndex reopened(lib.rootDir());
+        QVERIFY(reopened.load());
+        QVERIFY(reopened.empty());
+    }
+
     void testEntriesWithUnsafePathsAreRejectedAsBroken()
     {
-        const QString root = FS::PathCombine(m_dir.path(), "localfiles");
+        const QString root = libraryDir();
         QVERIFY(QDir(root).mkpath("."));
         QFile manifest(FS::PathCombine(root, "localfiles.json"));
         QVERIFY(manifest.open(QIODevice::WriteOnly));
@@ -257,7 +317,7 @@ class LibraryIndexTest : public QObject {
 
     void testMalformedManifestFailsWithoutLosingEntries()
     {
-        const QString root = FS::PathCombine(m_dir.path(), "localfiles");
+        const QString root = libraryDir();
         QVERIFY(QDir(root).mkpath("."));
         QFile manifest(FS::PathCombine(root, "localfiles.json"));
         QVERIFY(manifest.open(QIODevice::WriteOnly));
@@ -273,7 +333,7 @@ class LibraryIndexTest : public QObject {
 
     void testIncompleteEntriesAreSkipped()
     {
-        const QString root = FS::PathCombine(m_dir.path(), "localfiles");
+        const QString root = libraryDir();
         QVERIFY(QDir(root).mkpath("."));
         QFile manifest(FS::PathCombine(root, "localfiles.json"));
         QVERIFY(manifest.open(QIODevice::WriteOnly));
@@ -296,7 +356,7 @@ class LibraryIndexTest : public QObject {
 
     void testAllTypesRoundTrip()
     {
-        const QString root = FS::PathCombine(m_dir.path(), "localfiles");
+        const QString root = libraryDir();
         const std::pair<LibraryIndex::Type, QString> cases[] = {
             { LibraryIndex::Type::Mod, "mods" },
             { LibraryIndex::Type::ResourcePack, "resourcepacks" },
@@ -328,7 +388,7 @@ class LibraryIndexTest : public QObject {
 
     void testAddRejectsMissingSource()
     {
-        LibraryIndex lib(FS::PathCombine(m_dir.path(), "localfiles"));
+        LibraryIndex lib(libraryDir());
         QString error;
         auto ghost = makeEntry("ghost", "Ghost");
         QVERIFY(!lib.add(ghost, FS::PathCombine(m_dir.path(), "nope.jar"), &error));

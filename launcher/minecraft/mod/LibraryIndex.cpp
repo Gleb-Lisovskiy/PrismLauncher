@@ -188,7 +188,14 @@ bool LibraryIndex::load(QString* error)
 
     const QString manifest = manifestPath();
     if (!QFileInfo::exists(manifest)) {
-        return true;  // A library that was never used has no manifest, which is not an error.
+        // No manifest yet, but the type directories may still hold files the user put there by
+        // hand, so discovery has to run in this branch too. Returning early here is what made a
+        // library with files in it look permanently empty.
+        if (discoverUnlistedFiles()) {
+            save();
+        }
+        flagMissingFiles();
+        return true;
     }
 
     QFile file(manifest);
@@ -217,8 +224,57 @@ bool LibraryIndex::load(QString* error)
         m_entries.append(std::move(entry));
     }
 
+    if (discoverUnlistedFiles()) {
+        // Record what was found so the next load does not have to guess again.
+        save();
+    }
+
     flagMissingFiles();
     return true;
+}
+
+/** Adds entries for files that sit in a type directory but are not in the manifest.
+ *
+ *  A user who drops a jar into localfiles/mods/ expects to find it in the library, and reading
+ *  only the manifest made such files invisible, which looked like the library being broken rather
+ *  than empty. Entries found this way carry just the file name, so their description starts empty
+ *  until the user fills it in.
+ *
+ *  Returns true when anything was added. */
+bool LibraryIndex::discoverUnlistedFiles()
+{
+    bool added = false;
+
+    for (const auto type : { Type::Mod, Type::ResourcePack, Type::ShaderPack, Type::TexturePack }) {
+        const QDir typeDir(FS::PathCombine(m_root, typeDirName(type)));
+        if (!typeDir.exists()) {
+            continue;
+        }
+
+        for (const auto& info : typeDir.entryInfoList(QDir::Files | QDir::NoSymLinks)) {
+            const QString relative = QDir(m_root).relativeFilePath(info.absoluteFilePath());
+            const bool alreadyKnown = std::any_of(m_entries.cbegin(), m_entries.cend(), [&relative](const Entry& e) {
+                return e.file == relative;
+            });
+            if (alreadyKnown) {
+                continue;
+            }
+
+            Entry entry;
+            entry.type = type;
+            entry.file = relative;
+            entry.details.name = info.completeBaseName();
+            entry.addedAt = QDateTime::currentDateTime();
+            entry.id = makeId(type, entry.details, info.fileName());
+            if (find(entry.id)) {
+                continue;  // Same identity as an entry already in the manifest.
+            }
+            m_entries.append(std::move(entry));
+            added = true;
+        }
+    }
+
+    return added;
 }
 
 bool LibraryIndex::save(QString* error) const

@@ -168,6 +168,15 @@ void LibraryDialog::setFixedInstance(const QString& instanceId)
     ui->instanceLabel->setEnabled(false);
 }
 
+void LibraryDialog::setInstallAllowed(bool allowed)
+{
+    ui->installButton->setVisible(allowed);
+    ui->instanceCombo->setVisible(allowed);
+    ui->instanceLabel->setVisible(allowed);
+    m_installAllowed = allowed;
+    updateButtonStates();
+}
+
 void LibraryDialog::selectInstance(const QString& instanceId)
 {
     const int index = ui->instanceCombo->findData(instanceId);
@@ -191,10 +200,7 @@ void LibraryDialog::updateButtonStates()
 {
     const bool hasSelection = !selectedIds().isEmpty();
     const bool hasInstance = ui->instanceCombo->currentIndex() >= 0;
-    // Entries of the wrong type are filtered out of the view, so this only guards against a stale
-    // selection surviving a type change.
-    const bool installable = !m_typeFilter || ui->libraryView->selectionModel()->hasSelection();
-    ui->installButton->setEnabled(hasSelection && hasInstance && installable);
+    ui->installButton->setEnabled(m_installAllowed && hasSelection && hasInstance);
     ui->editButton->setEnabled(hasSelection);
     ui->removeButton->setEnabled(hasSelection);
 }
@@ -254,18 +260,23 @@ void LibraryDialog::dropEvent(QDropEvent* event)
 
 void LibraryDialog::onAddFiles()
 {
-    // Start in the library's own files directory: the desktop portal on some systems refuses to
-    // open at all when handed an empty starting directory, which looks like the button doing
-    // nothing at all. This is the same workaround the shortcut code uses.
+    // Not the static helper: on Wayland a native file dialog is routed through the desktop portal,
+    // and when the portal cannot register the application - which it could not on the machine this
+    // was tested on - the dialog simply never appears and the button looks dead. Qt's own dialog
+    // does not depend on it.
+    QFileDialog dialog(this);
+    dialog.setFileMode(QFileDialog::ExistingFiles);
+    dialog.setNameFilter(tr("Resource files (*.jar *.zip);;All files (*)"));
+    dialog.setOption(QFileDialog::DontUseNativeDialog, true);
+    dialog.setAcceptMode(QFileDialog::AcceptOpen);
+
     const QString startDir = FS::PathCombine(APPLICATION->library()->rootDir(), LibraryIndex::typeDirName(LibraryIndex::Type::Mod));
-    const QStringList files = QFileDialog::getOpenFileNames(this,
-                                                             tr("Add Files to Local Files"),
-                                                             QDir(startDir).exists() ? startDir : QString(),
-                                                             tr("Resource files (*.jar *.zip);;All files (*)"));
-    if (files.isEmpty()) {
+    dialog.setDirectory(QDir(startDir).exists() ? startDir : QDir::homePath());
+
+    if (dialog.exec() != QDialog::Accepted || dialog.selectedFiles().isEmpty()) {
         return;
     }
-    askTypeAndAdd(files);
+    askTypeAndAdd(dialog.selectedFiles());
 }
 
 void LibraryDialog::askTypeAndAdd(const QStringList& files)

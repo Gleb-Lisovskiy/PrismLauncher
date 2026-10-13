@@ -61,6 +61,12 @@ class LibraryDialog : public QDialog {
      *  and offering a dropdown invites installing into the wrong instance. */
     void setFixedInstance(const QString& instanceId);
 
+    /** Shows or hides the controls that install into an instance.
+     *
+     *  Off when the window is opened from the toolbar, where there is no obvious target instance
+     *  and asking for one was more confusing than useful. On when an instance page opened it. */
+    void setInstallAllowed(bool allowed);
+
     /** Type the dialog was restricted to, or nullopt when unrestricted. */
     [[nodiscard]] std::optional<LibraryIndex::Type> typeFilter() const { return m_typeFilter; }
 
@@ -84,4 +90,5 @@ class LibraryDialog : public QDialog {
     bool m_acceptDrops = false;
     std::optional<LibraryIndex::Type> m_typeFilter;
     bool m_fixedInstance = false;
+    bool m_installAllowed = true;
 };

@@ -1485,6 +1485,9 @@ void MainWindow::on_actionLibrary_triggered()
     if (!m_libraryDialog) {
         m_libraryDialog = new LibraryDialog(this);
         m_libraryDialog->setAcceptDropsEnabled(true);
+        // Opened from the toolbar there is no obvious target, so this window browses and edits
+        // the library. Installing happens from the instance's own resource pages.
+        m_libraryDialog->setInstallAllowed(false);
     }
 
     m_libraryDialog->reload();

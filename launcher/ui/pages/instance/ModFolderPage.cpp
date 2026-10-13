@@ -82,7 +82,7 @@ ModFolderPage::ModFolderPage(BaseInstance* inst, ModFolderModel* model, QWidget*
     // button so both ways of adding a mod are in the same place.
     m_installFromLibrary = new QAction(tr("Install Local Mods"), this);
     m_installFromLibrary->setToolTip(tr("Install mods you keep in your local files folder"));
-    m_installFromLibrary->setEnabled(false);
+    m_installFromLibrary->setEnabled(true);
     ui->actionsToolbar->insertActionBefore(ui->actionAddItem, m_installFromLibrary);
     connect(m_installFromLibrary, &QAction::triggered, this, &ModFolderPage::installFromLibrary);
 
