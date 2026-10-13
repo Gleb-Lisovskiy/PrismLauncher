@@ -43,7 +43,7 @@ class LibraryIndexTest : public QObject {
    private slots:
     void testEmptyLibraryIsNotAnError()
     {
-        LibraryIndex lib(FS::PathCombine(m_dir.path(), "lib"));
+        LibraryIndex lib(FS::PathCombine(m_dir.path(), "localfiles"));
         QVERIFY(lib.load());
         QVERIFY(lib.empty());
         QCOMPARE(lib.size(), 0);
@@ -51,7 +51,7 @@ class LibraryIndexTest : public QObject {
 
     void testAddStoresPayloadAndManifest()
     {
-        LibraryIndex lib(FS::PathCombine(m_dir.path(), "lib"));
+        LibraryIndex lib(FS::PathCombine(m_dir.path(), "localfiles"));
         const QString src = writeSource("thing.jar", "payload-one");
 
         auto entry = makeEntry("thing", "Thing");
@@ -62,7 +62,7 @@ class LibraryIndexTest : public QObject {
         // add() must hand back the identity and path it settled on, otherwise callers have to
         // look them up again.
         QVERIFY(!entry.id.isEmpty());
-        QVERIFY(entry.file.startsWith("files/mods/"));
+        QVERIFY(entry.file.startsWith("mods/"));
 
         const auto* stored = lib.find(entry.id);
         QVERIFY(stored);
@@ -76,7 +76,7 @@ class LibraryIndexTest : public QObject {
 
     void testSameModDifferentVersionsCoexist()
     {
-        LibraryIndex lib(FS::PathCombine(m_dir.path(), "lib"));
+        LibraryIndex lib(FS::PathCombine(m_dir.path(), "localfiles"));
         QString error;
 
         auto v1 = makeEntry("thing", "Thing", LibraryIndex::Type::Mod, "1.0.0");
@@ -97,7 +97,7 @@ class LibraryIndexTest : public QObject {
 
     void testRoundTrip()
     {
-        const QString root = FS::PathCombine(m_dir.path(), "lib");
+        const QString root = FS::PathCombine(m_dir.path(), "localfiles");
         const QString src = writeSource("thing.jar", "payload-one");
 
         QString error;
@@ -123,7 +123,7 @@ class LibraryIndexTest : public QObject {
 
     void testReAddingSameVersionWithNewFileNameDropsOldPayload()
     {
-        LibraryIndex lib(FS::PathCombine(m_dir.path(), "lib"));
+        LibraryIndex lib(FS::PathCombine(m_dir.path(), "localfiles"));
         QString error;
 
         auto first = makeEntry("thing", "Thing");
@@ -141,7 +141,7 @@ class LibraryIndexTest : public QObject {
 
     void testReAddingUnderTheSameFileNameReusesThePath()
     {
-        LibraryIndex lib(FS::PathCombine(m_dir.path(), "lib"));
+        LibraryIndex lib(FS::PathCombine(m_dir.path(), "localfiles"));
         QString error;
 
         auto first = makeEntry("thing", "Thing");
@@ -181,7 +181,7 @@ class LibraryIndexTest : public QObject {
 
     void testFallsBackToFileNameWhenNoModId()
     {
-        LibraryIndex lib(FS::PathCombine(m_dir.path(), "lib"));
+        LibraryIndex lib(FS::PathCombine(m_dir.path(), "localfiles"));
         QString error;
         // The identity comes from the source file's name, which is what gets stored.
         const QString src = writeSource("thing.jar", "payload");
@@ -193,7 +193,7 @@ class LibraryIndexTest : public QObject {
 
     void testRemoveDropsPayloadAndManifest()
     {
-        LibraryIndex lib(FS::PathCombine(m_dir.path(), "lib"));
+        LibraryIndex lib(FS::PathCombine(m_dir.path(), "localfiles"));
         QString error;
         auto entry = makeEntry("thing", "Thing");
         QVERIFY2(lib.add(entry, writeSource("thing.jar", "payload"), &error), qPrintable(error));
@@ -212,7 +212,7 @@ class LibraryIndexTest : public QObject {
 
     void testMissingPayloadIsFlaggedNotDropped()
     {
-        const QString root = FS::PathCombine(m_dir.path(), "lib");
+        const QString root = FS::PathCombine(m_dir.path(), "localfiles");
         QString error;
         {
             LibraryIndex lib(root);
@@ -232,9 +232,9 @@ class LibraryIndexTest : public QObject {
 
     void testEntriesWithUnsafePathsAreRejectedAsBroken()
     {
-        const QString root = FS::PathCombine(m_dir.path(), "lib");
+        const QString root = FS::PathCombine(m_dir.path(), "localfiles");
         QVERIFY(QDir(root).mkpath("."));
-        QFile manifest(FS::PathCombine(root, "library.json"));
+        QFile manifest(FS::PathCombine(root, "localfiles.json"));
         QVERIFY(manifest.open(QIODevice::WriteOnly));
         manifest.write(R"({
             "version": 1,
@@ -242,7 +242,7 @@ class LibraryIndexTest : public QObject {
                 { "id": "escape", "type": "mods", "file": "../../etc/passwd", "modId": "escape" },
                 { "id": "absolute", "type": "mods", "file": "/etc/passwd", "modId": "absolute" },
                 { "id": "outside", "type": "mods", "file": "elsewhere/x.jar", "modId": "outside" },
-                { "id": "fine", "type": "mods", "file": "files/mods/x.jar", "modId": "fine" }
+                { "id": "fine", "type": "mods", "file": "mods/x.jar", "modId": "fine" }
             ]
         })");
         manifest.close();
@@ -252,14 +252,14 @@ class LibraryIndexTest : public QObject {
         QCOMPARE(lib.size(), 4);
         QVERIFY(lib.find("escape")->broken);
         QVERIFY(lib.find("absolute")->broken);
-        QVERIFY(lib.find("outside")->broken);  // Not under files/, so not trusted.
+        QVERIFY(lib.find("outside")->broken);  // Not a known type directory, so not trusted.
     }
 
     void testMalformedManifestFailsWithoutLosingEntries()
     {
-        const QString root = FS::PathCombine(m_dir.path(), "lib");
+        const QString root = FS::PathCombine(m_dir.path(), "localfiles");
         QVERIFY(QDir(root).mkpath("."));
-        QFile manifest(FS::PathCombine(root, "library.json"));
+        QFile manifest(FS::PathCombine(root, "localfiles.json"));
         QVERIFY(manifest.open(QIODevice::WriteOnly));
         manifest.write("{ this is not json");
         manifest.close();
@@ -273,16 +273,16 @@ class LibraryIndexTest : public QObject {
 
     void testIncompleteEntriesAreSkipped()
     {
-        const QString root = FS::PathCombine(m_dir.path(), "lib");
+        const QString root = FS::PathCombine(m_dir.path(), "localfiles");
         QVERIFY(QDir(root).mkpath("."));
-        QFile manifest(FS::PathCombine(root, "library.json"));
+        QFile manifest(FS::PathCombine(root, "localfiles.json"));
         QVERIFY(manifest.open(QIODevice::WriteOnly));
         manifest.write(R"({
             "version": 1,
             "entries": [
-                { "type": "mods", "file": "files/mods/a.jar" },
+                { "type": "mods", "file": "mods/a.jar" },
                 { "id": "no-file", "type": "mods" },
-                { "id": "ok", "type": "shaderpacks", "file": "files/shaderpacks/b.zip", "modId": "ok" }
+                { "id": "ok", "type": "shaderpacks", "file": "shaderpacks/b.zip", "modId": "ok" }
             ]
         })");
         manifest.close();
@@ -296,7 +296,7 @@ class LibraryIndexTest : public QObject {
 
     void testAllTypesRoundTrip()
     {
-        const QString root = FS::PathCombine(m_dir.path(), "lib");
+        const QString root = FS::PathCombine(m_dir.path(), "localfiles");
         const std::pair<LibraryIndex::Type, QString> cases[] = {
             { LibraryIndex::Type::Mod, "mods" },
             { LibraryIndex::Type::ResourcePack, "resourcepacks" },
@@ -310,7 +310,7 @@ class LibraryIndexTest : public QObject {
             for (const auto& [type, dirName] : cases) {
                 auto entry = makeEntry("x-" + dirName, "X", type);
                 QVERIFY2(lib.add(entry, writeSource(dirName + ".zip", "data"), &error), qPrintable(error));
-                QVERIFY2(entry.file.startsWith("files/" + dirName + "/"), qPrintable(entry.file));
+                QVERIFY2(entry.file.startsWith(dirName + "/"), qPrintable(entry.file));
             }
             QCOMPARE(lib.size(), 4);
         }
@@ -328,7 +328,7 @@ class LibraryIndexTest : public QObject {
 
     void testAddRejectsMissingSource()
     {
-        LibraryIndex lib(FS::PathCombine(m_dir.path(), "lib"));
+        LibraryIndex lib(FS::PathCombine(m_dir.path(), "localfiles"));
         QString error;
         auto ghost = makeEntry("ghost", "Ghost");
         QVERIFY(!lib.add(ghost, FS::PathCombine(m_dir.path(), "nope.jar"), &error));

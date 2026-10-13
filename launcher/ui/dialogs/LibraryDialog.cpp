@@ -6,6 +6,9 @@
 
 #include <QComboBox>
 #include <QDialogButtonBox>
+#include <QDir>
+#include <QDragEnterEvent>
+#include <QDropEvent>
 #include <QFileDialog>
 #include <QFileInfo>
 #include <QFormLayout>
@@ -196,24 +199,74 @@ void LibraryDialog::showError(const QString& title, const QString& message)
     QMessageBox::warning(this, title, message);
 }
 
-void LibraryDialog::onAddFiles()
+void LibraryDialog::setAcceptDropsEnabled(bool enabled)
 {
-    const QStringList files =
-        QFileDialog::getOpenFileNames(this, tr("Add Files to Library"), QString(), tr("Resource files (*.jar *.zip);;All files (*)"));
-    if (files.isEmpty()) {
+    m_acceptDrops = enabled;
+    setAcceptDrops(enabled);
+}
+
+void LibraryDialog::dragEnterEvent(QDragEnterEvent* event)
+{
+    if (m_acceptDrops && event->mimeData()->hasUrls()) {
+        event->acceptProposedAction();
+        return;
+    }
+    QDialog::dragEnterEvent(event);
+}
+
+void LibraryDialog::dropEvent(QDropEvent* event)
+{
+    if (!m_acceptDrops || !event->mimeData()->hasUrls()) {
+        QDialog::dropEvent(event);
         return;
     }
 
-    const QStringList types{ typeName(LibraryIndex::Type::Mod), typeName(LibraryIndex::Type::ResourcePack),
-                             typeName(LibraryIndex::Type::ShaderPack), typeName(LibraryIndex::Type::TexturePack) };
+    QStringList paths;
+    for (const auto& url : event->mimeData()->urls()) {
+        if (url.isLocalFile() && QFileInfo(url.toLocalFile()).isFile()) {
+            paths.append(url.toLocalFile());
+        }
+    }
+    event->acceptProposedAction();
+
+    if (!paths.isEmpty()) {
+        askTypeAndAdd(paths);
+    }
+}
+
+void LibraryDialog::onAddFiles()
+{
+    // Start in the library's own files directory: the desktop portal on some systems refuses to
+    // open at all when handed an empty starting directory, which looks like the button doing
+    // nothing at all. This is the same workaround the shortcut code uses.
+    const QString startDir = FS::PathCombine(APPLICATION->library()->rootDir(), LibraryIndex::typeDirName(LibraryIndex::Type::Mod));
+    const QStringList files = QFileDialog::getOpenFileNames(this,
+                                                             tr("Add Files to Local Files"),
+                                                             QDir(startDir).exists() ? startDir : QString(),
+                                                             tr("Resource files (*.jar *.zip);;All files (*)"));
+    if (files.isEmpty()) {
+        return;
+    }
+    askTypeAndAdd(files);
+}
+
+void LibraryDialog::askTypeAndAdd(const QStringList& files)
+{
+    const QStringList types{ typeName(LibraryIndex::Type::Mod),
+                             typeName(LibraryIndex::Type::ResourcePack),
+                             typeName(LibraryIndex::Type::ShaderPack),
+                             typeName(LibraryIndex::Type::TexturePack) };
     bool accepted = false;
     const auto chosen =
         QInputDialog::getItem(this, tr("Resource Type"), tr("What kind of file are you adding?"), types, 0, false, &accepted);
     if (!accepted) {
         return;
     }
-    const auto type = typeFromName(chosen);
+    addFiles(files, typeFromName(chosen));
+}
 
+void LibraryDialog::addFiles(const QStringList& files, LibraryIndex::Type type)
+{
     auto* library = APPLICATION->library();
     int added = 0;
     QStringList failures;

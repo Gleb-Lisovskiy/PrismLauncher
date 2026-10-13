@@ -11,6 +11,7 @@
 #include <QString>
 #include <QStringList>
 
+#include "FileSystem.h"
 #include "minecraft/mod/ModDetails.h"
 #include "modplatform/ModIndex.h"
 
@@ -24,8 +25,8 @@
  *
  *  On-disk layout, rooted at the directory handed to the constructor:
  *
- *      library.json                 manifest, the only authoritative list of entries
- *      files/<type>/<filename>     the payload, one copy per entry
+ *      localfiles.json                 manifest, the only authoritative list of entries
+ *      <type>/<filename>               the payload, one copy per entry
  *
  *  The manifest is rewritten whenever entries change. A file present on disk but absent from the
  *  manifest is ignored, and an entry pointing at a missing file is reported as broken rather than
@@ -65,7 +66,7 @@ class LibraryIndex {
     [[nodiscard]] QString absoluteFilePath(const Entry& entry) const;
 
     /** Absolute path of the manifest. */
-    [[nodiscard]] QString manifestPath() const { return FS::PathCombine(m_root, "library.json"); }
+    [[nodiscard]] QString manifestPath() const { return FS::PathCombine(m_root, "localfiles.json"); }
 
     /** Reads the manifest. Entries whose file is missing are kept and flagged broken.
      *  Returns false and fills error when the manifest exists but could not be read or parsed. */

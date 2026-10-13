@@ -18,17 +18,40 @@
 namespace {
 constexpr int kManifestVersion = 1;
 
-/** Files are stored under files/<type>/ but the name is not trusted: a manifest is hand-editable
- *  and an absolute or traversing path would let an entry point anywhere on the filesystem. */
+QString typeDirName(LibraryIndex::Type type)
+{
+    switch (type) {
+        case LibraryIndex::Type::Mod:
+            return "mods";
+        case LibraryIndex::Type::ResourcePack:
+            return "resourcepacks";
+        case LibraryIndex::Type::ShaderPack:
+            return "shaderpacks";
+        case LibraryIndex::Type::TexturePack:
+            return "texturepacks";
+    }
+    return "mods";
+}
+
+/** Files live directly under <type>/ in the library root, but a manifest is meant to be
+ *  hand-editable: an absolute path or a ".." in it would otherwise let an entry point anywhere on
+ *  the filesystem, so only known type directories are honoured. */
 bool isSafeRelativePath(const QString& path)
 {
-    if (path.isEmpty() || QDir::isAbsolutePath(path)) {
+    if (path.isEmpty() || QDir::isAbsolutePath(path) || path.contains("..")) {
         return false;
     }
-    if (path.contains("..")) {
+
+    const auto slash = path.indexOf('/');
+    if (slash <= 0 || slash == path.size() - 1) {
         return false;
     }
-    return path.startsWith("files/");
+
+    static const QStringList knownDirs{ typeDirName(LibraryIndex::Type::Mod),
+                                        typeDirName(LibraryIndex::Type::ResourcePack),
+                                        typeDirName(LibraryIndex::Type::ShaderPack),
+                                        typeDirName(LibraryIndex::Type::TexturePack) };
+    return knownDirs.contains(path.left(slash));
 }
 
 /** QJsonArray has no toStringList(); entries that are not strings are skipped rather than
@@ -49,17 +72,7 @@ LibraryIndex::LibraryIndex(QString rootDir) : m_root(std::move(rootDir)) {}
 
 QString LibraryIndex::typeDirName(Type type)
 {
-    switch (type) {
-        case Type::Mod:
-            return "mods";
-        case Type::ResourcePack:
-            return "resourcepacks";
-        case Type::ShaderPack:
-            return "shaderpacks";
-        case Type::TexturePack:
-            return "texturepacks";
-    }
-    return "mods";
+    return ::typeDirName(type);
 }
 
 QString LibraryIndex::makeId(Type type, const ModDetails& details, const QString& fileName)
@@ -249,7 +262,7 @@ bool LibraryIndex::importPayload(Type type, const QString& sourceFilePath, QStri
         return false;
     }
 
-    const QDir typeDir(FS::PathCombine(FS::PathCombine(m_root, "files"), typeDirName(type)));
+    const QDir typeDir(FS::PathCombine(m_root, typeDirName(type)));
     if (!typeDir.mkpath(".")) {
         if (error) {
             *error = QObject::tr("Could not create the library directory: %1").arg(typeDir.absolutePath());

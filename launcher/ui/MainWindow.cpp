@@ -1479,13 +1479,21 @@ void MainWindow::onCatChanged(int)
 
 void MainWindow::on_actionLibrary_triggered()
 {
-    // Modal rather than modeless: the library edits shared files, and leaving two copies of the
-    // manifest open in the same process is more trouble than it is worth.
-    LibraryDialog dialog(this);
-    if (m_selectedInstance) {
-        dialog.selectInstance(m_selectedInstance->id());
+    // Deliberately not modal: the Add Files button opens a native file dialog, and on Wayland that
+    // goes through the desktop portal, which refuses to present anything on top of a modal dialog.
+    // A modal library window made the button look completely dead.
+    if (!m_libraryDialog) {
+        m_libraryDialog = new LibraryDialog(this);
+        m_libraryDialog->setAcceptDropsEnabled(true);
     }
-    dialog.exec();
+
+    m_libraryDialog->reload();
+    if (m_selectedInstance) {
+        m_libraryDialog->selectInstance(m_selectedInstance->id());
+    }
+    m_libraryDialog->show();
+    m_libraryDialog->raise();
+    m_libraryDialog->activateWindow();
 }
 
 void MainWindow::on_actionAbout_triggered()

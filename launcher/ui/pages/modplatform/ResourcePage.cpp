@@ -580,7 +580,7 @@ void ResourcePage::onAddToLibrary()
     // LibraryDownloadTask keys the payload by file name; give it one now so the entry gets the same
     // name whether it was added from here or from a file on disk.
     if (!version.fileName.isEmpty()) {
-        entry.file = QString("files/%1/%2").arg(LibraryIndex::typeDirName(entry.type), version.fileName);
+        entry.file = QString("%1/%2").arg(LibraryIndex::typeDirName(entry.type), version.fileName);
     }
 
     auto* library = APPLICATION->library();

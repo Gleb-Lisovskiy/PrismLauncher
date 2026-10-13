@@ -35,21 +35,38 @@ class LibraryDialog : public QDialog {
     LibraryDialog(QWidget* parent = nullptr);
     ~LibraryDialog() override;
 
+    /** Whether files may be dropped onto the dialog to add them. */
+    void setAcceptDropsEnabled(bool enabled);
+
+   protected:
+    /** Accepts dropped files so they can be added without going through the file dialog, which
+     *  is not reachable at all while the desktop portal is misbehaving. */
+    void dragEnterEvent(QDragEnterEvent* event) override;
+    void dropEvent(QDropEvent* event) override;
+
+   public:
     /** Selects the given instance id in the target dropdown, if it exists. */
     void selectInstance(const QString& instanceId);
 
-   private:
+    /** Re-reads the manifest, picking up changes made elsewhere. */
     void reload();
+
+   private:
     void updateButtonStates();
     [[nodiscard]] QStringList selectedIds() const;
     void onAddFiles();
     void onEdit();
     void onRemove();
     void onInstall();
+    void addFiles(const QStringList& paths, LibraryIndex::Type type);
+    void askTypeAndAdd(const QStringList& paths);
     void onShowContextMenu(const QPoint&);
     void showError(const QString& title, const QString& message);
+
+   public:
 
     Ui::LibraryDialogForm* ui = nullptr;
     LibraryModel* m_model = nullptr;
     LibraryModel::FilterProxy* m_proxy = nullptr;
+    bool m_acceptDrops = false;
 };

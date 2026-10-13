@@ -1274,7 +1274,7 @@ bool Application::createSetupWizard()
 LibraryIndex* Application::library() const
 {
     if (!m_library) {
-        m_library = std::make_unique<LibraryIndex>(FS::PathCombine(dataRoot(), "library"));
+        m_library = std::make_unique<LibraryIndex>(FS::PathCombine(dataRoot(), "localfiles"));
         // A malformed manifest must not stop the launcher from starting; the library opens empty
         // and says why.
         QString error;
