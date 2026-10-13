@@ -82,6 +82,9 @@ QVariant LibraryModel::data(const QModelIndex& index, int role) const
     if (role == EntryRole) {
         return QVariant::fromValue(entry);
     }
+    if (role == TypeRole) {
+        return QVariant::fromValue(entry.type);
+    }
     if (role == Qt::ToolTipRole) {
         return entry.details.description.isEmpty() ? entry.details.name : entry.details.description;
     }
@@ -143,6 +146,13 @@ QVariant LibraryModel::headerData(int section, Qt::Orientation orientation, int 
 
 auto LibraryModel::FilterProxy::filterAcceptsRow(int sourceRow, const QModelIndex& sourceParent) const -> bool
 {
+    if (m_typeFilter) {
+        const auto type = sourceModel()->data(sourceModel()->index(sourceRow, TypeColumn, sourceParent), TypeRole).value<LibraryIndex::Type>();
+        if (type != *m_typeFilter) {
+            return false;
+        }
+    }
+
     const auto filter = filterRegularExpression().pattern().trimmed();
     if (filter.isEmpty()) {
         return true;

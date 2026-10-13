@@ -51,6 +51,19 @@ class LibraryDialog : public QDialog {
     /** Re-reads the manifest, picking up changes made elsewhere. */
     void reload();
 
+    /** Restricts the dialog to one resource type, and hides the type selector on the add path.
+     *  Used when opened from an instance page, where only that kind of resource can be installed. */
+    void setTypeFilter(LibraryIndex::Type type);
+
+    /** Pins the target instance and removes the selector.
+     *
+     *  Called when the dialog is opened from an instance page, where the target is already known
+     *  and offering a dropdown invites installing into the wrong instance. */
+    void setFixedInstance(const QString& instanceId);
+
+    /** Type the dialog was restricted to, or nullopt when unrestricted. */
+    [[nodiscard]] std::optional<LibraryIndex::Type> typeFilter() const { return m_typeFilter; }
+
    private:
     void updateButtonStates();
     [[nodiscard]] QStringList selectedIds() const;
@@ -69,4 +82,6 @@ class LibraryDialog : public QDialog {
     LibraryModel* m_model = nullptr;
     LibraryModel::FilterProxy* m_proxy = nullptr;
     bool m_acceptDrops = false;
+    std::optional<LibraryIndex::Type> m_typeFilter;
+    bool m_fixedInstance = false;
 };

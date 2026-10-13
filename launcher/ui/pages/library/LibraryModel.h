@@ -4,6 +4,8 @@
 
 #pragma once
 
+#include <optional>
+
 #include <QAbstractTableModel>
 #include <QSortFilterProxyModel>
 
@@ -21,7 +23,7 @@ class LibraryModel : public QAbstractTableModel {
 
    public:
     enum Column { NameColumn, VersionColumn, TypeColumn, ModIdColumn, SizeColumn, SourceColumn, StatusColumn, NUM_COLUMNS };
-    enum Roles { IdRole = Qt::UserRole + 1, EntryRole };
+    enum Roles { IdRole = Qt::UserRole + 1, EntryRole, TypeRole };
 
     explicit LibraryModel(QObject* parent = nullptr);
 
@@ -47,8 +49,14 @@ class LibraryModel : public QAbstractTableModel {
        public:
         explicit FilterProxy(QObject* parent = nullptr) : QSortFilterProxyModel(parent) { setDynamicSortFilter(true); }
 
+        /** Hides every entry whose type does not match. An unset filter shows all types. */
+        void setTypeFilter(std::optional<LibraryIndex::Type> type) { m_typeFilter = type; invalidateFilter(); }
+
        protected:
         auto filterAcceptsRow(int sourceRow, const QModelIndex& sourceParent) const -> bool override;
+
+       private:
+        std::optional<LibraryIndex::Type> m_typeFilter;
     };
 
    private:

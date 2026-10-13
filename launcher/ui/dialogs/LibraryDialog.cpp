@@ -153,6 +153,21 @@ LibraryDialog::LibraryDialog(QWidget* parent) : QDialog(parent)
     reload();
 }
 
+void LibraryDialog::setTypeFilter(LibraryIndex::Type type)
+{
+    m_typeFilter = type;
+    m_proxy->setTypeFilter(type);
+    reload();
+}
+
+void LibraryDialog::setFixedInstance(const QString& instanceId)
+{
+    selectInstance(instanceId);
+    m_fixedInstance = true;
+    ui->instanceCombo->setEnabled(false);
+    ui->instanceLabel->setEnabled(false);
+}
+
 void LibraryDialog::selectInstance(const QString& instanceId)
 {
     const int index = ui->instanceCombo->findData(instanceId);
@@ -176,7 +191,10 @@ void LibraryDialog::updateButtonStates()
 {
     const bool hasSelection = !selectedIds().isEmpty();
     const bool hasInstance = ui->instanceCombo->currentIndex() >= 0;
-    ui->installButton->setEnabled(hasSelection && hasInstance);
+    // Entries of the wrong type are filtered out of the view, so this only guards against a stale
+    // selection surviving a type change.
+    const bool installable = !m_typeFilter || ui->libraryView->selectionModel()->hasSelection();
+    ui->installButton->setEnabled(hasSelection && hasInstance && installable);
     ui->editButton->setEnabled(hasSelection);
     ui->removeButton->setEnabled(hasSelection);
 }
@@ -252,6 +270,13 @@ void LibraryDialog::onAddFiles()
 
 void LibraryDialog::askTypeAndAdd(const QStringList& files)
 {
+    // When the dialog was opened for one resource type, there is nothing to ask: the caller
+    // already said what these files are.
+    if (m_typeFilter) {
+        addFiles(files, *m_typeFilter);
+        return;
+    }
+
     const QStringList types{ typeName(LibraryIndex::Type::Mod),
                              typeName(LibraryIndex::Type::ResourcePack),
                              typeName(LibraryIndex::Type::ShaderPack),
@@ -285,6 +310,11 @@ void LibraryDialog::addFiles(const QStringList& files, LibraryIndex::Type type)
 
     if (!failures.isEmpty()) {
         showError(tr("Some Files Were Not Added"), tr("Added %n file(s).\n\n", nullptr, added) + failures.join('\n'));
+    }
+
+    // When a fixed target was given the user only came here to install, so do that for them.
+    if (m_fixedInstance) {
+        onInstall();
     }
 }
 

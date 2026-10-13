@@ -67,6 +67,7 @@ class ModFolderPage : public ExternalResourcesPage {
     void removeItems(const QItemSelection& selection) override;
 
     void downloadMods();
+    void installFromLibrary();
     void downloadDialogFinished(int result);
     void updateMods(bool includeDeps = false);
     void deleteModMetadata();
@@ -76,6 +77,7 @@ class ModFolderPage : public ExternalResourcesPage {
    protected:
     ModFolderModel* m_model;
     QPointer<ResourceDownload::ModDownloadDialog> m_downloadDialog;
+    QAction* m_installFromLibrary = nullptr;
 };
 
 class CoreModFolderPage : public ModFolderPage {

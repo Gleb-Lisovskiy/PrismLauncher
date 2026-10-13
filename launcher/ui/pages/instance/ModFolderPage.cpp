@@ -65,6 +65,7 @@
 
 #include "tasks/ConcurrentTask.h"
 #include "tasks/Task.h"
+#include "ui/dialogs/LibraryDialog.h"
 #include "ui/dialogs/ProgressDialog.h"
 
 ModFolderPage::ModFolderPage(BaseInstance* inst, ModFolderModel* model, QWidget* parent)
@@ -76,6 +77,14 @@ ModFolderPage::ModFolderPage(BaseInstance* inst, ModFolderModel* model, QWidget*
     ui->actionsToolbar->insertActionBefore(ui->actionAddItem, ui->actionDownloadItem);
 
     connect(ui->actionDownloadItem, &QAction::triggered, this, &ModFolderPage::downloadMods);
+
+    // Installs from the user's local files folder into this instance. Sits next to the download
+    // button so both ways of adding a mod are in the same place.
+    m_installFromLibrary = new QAction(tr("Install Local Mods"), this);
+    m_installFromLibrary->setToolTip(tr("Install mods you keep in your local files folder"));
+    m_installFromLibrary->setEnabled(false);
+    ui->actionsToolbar->insertActionBefore(ui->actionAddItem, m_installFromLibrary);
+    connect(m_installFromLibrary, &QAction::triggered, this, &ModFolderPage::installFromLibrary);
 
     ui->actionUpdateItem->setToolTip(tr("Try to check or update all selected mods (all mods if none are selected)"));
     connect(ui->actionUpdateItem, &QAction::triggered, this, &ModFolderPage::updateMods);
@@ -158,6 +167,19 @@ void ModFolderPage::removeItems(const QItemSelection& selection)
         }
     }
     m_model->deleteResources(indexes);
+}
+
+void ModFolderPage::installFromLibrary()
+{
+    if (m_instance->typeName() != "Minecraft") {
+        return;  // this is a null instance or a legacy instance
+    }
+
+    // Modal is fine here: nothing below opens a native file dialog.
+    LibraryDialog dialog(this);
+    dialog.setTypeFilter(LibraryIndex::Type::Mod);
+    dialog.setFixedInstance(m_instance->id());
+    dialog.exec();
 }
 
 void ModFolderPage::downloadMods()
