@@ -596,17 +596,9 @@ void ResourcePage::onAddToLibrary()
 
     auto* library = APPLICATION->library();
 
-    const auto packName = pack->name;
     auto* task = new LibraryDownloadTask(QUrl(version.downloadUrl), entry, library, this);
     ProgressDialog dialog(this);
     dialog.setSkipButton(true, tr("Abort"));
-    connect(task, &Task::succeeded, this, [this, packName] {
-        QMessageBox::information(this,
-                                 tr("Added to Local Files"),
-                                 tr("'%1' is now in your local files. It appears under the 'Local Files' tab whenever you "
-                                    "install mods, resource packs or shader packs into an instance.")
-                                     .arg(packName));
-    });
     dialog.execWithTask(task);
 }
 
