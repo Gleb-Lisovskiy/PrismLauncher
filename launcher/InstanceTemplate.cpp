@@ -21,6 +21,7 @@
 #include "minecraft/Component.h"
 #include "minecraft/MinecraftInstance.h"
 #include "minecraft/PackProfile.h"
+#include "net/Mode.h"
 #include "settings/SettingsObject.h"
 
 namespace {
@@ -69,6 +70,12 @@ QList<InstanceTemplate::Component> readComponents(BaseInstance& instance)
     auto* profile = mc->getPackProfile();
     if (!profile)
         return out;
+
+    // The component list is loaded lazily: an instance the user has not opened yet reports no
+    // components at all. Without loading it here a template would remember no game version, and an
+    // instance built from it would have nothing to install.
+    if (!profile->isLoaded())
+        profile->reload(Net::Mode::Offline);
 
     for (int i = 0; i < profile->rowCount(); i++) {
         auto component = profile->getComponent(static_cast<size_t>(i));

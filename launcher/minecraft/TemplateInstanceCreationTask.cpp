@@ -24,6 +24,13 @@ std::unique_ptr<MinecraftInstance> TemplateCreationTask::createInstance()
 {
     setStatus(tr("Creating instance from template \"%1\"").arg(m_template.name));
 
+    // A template with no components would build an empty instance whose only failure would show up
+    // much later, as a download error. Refuse it here so the user gets told what is wrong.
+    if (m_template.minecraftVersion().isEmpty()) {
+        setError(tr("The template does not remember a Minecraft version. Save it again from an instance."));
+        return nullptr;
+    }
+
     auto instance = std::make_unique<MinecraftInstance>(
         m_globalSettings, std::make_unique<INISettingsObject>(FS::PathCombine(m_stagingPath, "instance.cfg")), m_stagingPath);
 
