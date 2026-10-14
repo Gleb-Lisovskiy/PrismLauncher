@@ -95,6 +95,12 @@ ResourcePage::ResourcePage(ResourceDownloadDialog* parent, BaseInstance& baseIns
 
     connect(m_ui->packView, &QAbstractItemView::doubleClicked, this, &ResourcePage::onResourceToggle);
     connect(delegate, &ProjectItemDelegate::checkboxClicked, this, &ResourcePage::onResourceToggle);
+
+    // The library button belongs to the page as a whole, not only to the single-project view that
+    // openProject() builds, so it is wired here and works while browsing too. Visibility is decided
+    // in openedImpl(), once the concrete page is constructed and supportsLibrary() is meaningful.
+    connect(m_ui->addToLibraryButton, &QPushButton::clicked, this, &ResourcePage::onAddToLibrary);
+    connect(m_ui->versionSelectionBox, &QComboBox::currentIndexChanged, this, [this](int index) { updateAddToLibraryButton(index); });
 }
 
 ResourcePage::~ResourcePage()
@@ -114,6 +120,11 @@ void ResourcePage::openedImpl()
         m_ui->resourceFilterButton->setVisible(false);
         m_ui->filterWidget->hide();
     }
+
+    // Pages whose resources have no library equivalent - data packs, for instance - have nothing to
+    // save, so they hide the button. This is asked here rather than in the constructor because
+    // supportsLibrary() is virtual and the concrete page is only complete by the time it opens.
+    m_ui->addToLibraryButton->setVisible(supportsLibrary());
 
     //: String in the search bar of the mod downloading dialog
     m_ui->searchEdit->setPlaceholderText(tr("Search for %1...").arg(resourcesString()));
@@ -766,11 +777,6 @@ void ResourcePage::openProject(const QVariant& projectID)
 
     connect(m_ui->versionSelectionBox, &QComboBox::currentIndexChanged, this,
             [this, okBtn](int index) { okBtn->setEnabled(m_ui->versionSelectionBox->itemData(index).toInt() >= 0); });
-
-    m_ui->addToLibraryButton->setVisible(supportsLibrary());
-    connect(m_ui->addToLibraryButton, &QPushButton::clicked, this, &ResourcePage::onAddToLibrary);
-    connect(m_ui->versionSelectionBox, &QComboBox::currentIndexChanged, this,
-            [this](int index) { updateAddToLibraryButton(index); });
 
     auto jump = [this] {
         if (m_model->rowCount({}) > 0) {
