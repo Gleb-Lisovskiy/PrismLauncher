@@ -4,19 +4,22 @@
 
 #include "LibraryIndex.h"
 
+#include <algorithm>
+
 #include <QCryptographicHash>
+#include <QDebug>
+#include <QDir>
 #include <QFile>
 #include <QFileInfo>
-#include <QJsonArray>
-#include <QJsonDocument>
-#include <QJsonParseError>
 #include <QObject>
 #include <QSaveFile>
 
 #include "FileSystem.h"
 #include "minecraft/mod/Mod.h"
 #include "minecraft/mod/tasks/LocalModParseTask.h"
+#include "minecraft/mod/tasks/LocalResourceParse.h"
 
+namespace {
 /** Reads a mod's own metadata out of the jar: name, mod id, version and description.
  *
  *  A file dropped into the library by hand has none of this until something opens it, and the file
@@ -33,56 +36,138 @@ bool readModDetails(const QFileInfo& file, ModDetails& details)
     return true;
 }
 
-namespace {
-constexpr int kManifestVersion = 1;
-
-QString typeDirName(LibraryIndex::Type type)
+bool isTypeDirName(const QString& name)
 {
-    switch (type) {
-        case LibraryIndex::Type::Mod:
-            return "mods";
-        case LibraryIndex::Type::ResourcePack:
-            return "resourcepacks";
-        case LibraryIndex::Type::ShaderPack:
-            return "shaderpacks";
-        case LibraryIndex::Type::TexturePack:
-            return "texturepacks";
-    }
-    return "mods";
-}
-
-/** Files live directly under <type>/ in the library root, but a manifest is meant to be
- *  hand-editable: an absolute path or a ".." in it would otherwise let an entry point anywhere on
- *  the filesystem, so only known type directories are honoured. */
-bool isSafeRelativePath(const QString& path)
-{
-    if (path.isEmpty() || QDir::isAbsolutePath(path) || path.contains("..")) {
-        return false;
-    }
-
-    const auto slash = path.indexOf('/');
-    if (slash <= 0 || slash == path.size() - 1) {
-        return false;
-    }
-
-    static const QStringList knownDirs{ typeDirName(LibraryIndex::Type::Mod),
-                                        typeDirName(LibraryIndex::Type::ResourcePack),
-                                        typeDirName(LibraryIndex::Type::ShaderPack),
-                                        typeDirName(LibraryIndex::Type::TexturePack) };
-    return knownDirs.contains(path.left(slash));
-}
-
-/** QJsonArray has no toStringList(); entries that are not strings are skipped rather than
- *  turning into empty strings that later look like real metadata. */
-QStringList toStringList(const QJsonValue& value)
-{
-    QStringList result;
-    for (const auto& item : value.toArray()) {
-        if (item.isString()) {
-            result.append(item.toString());
+    for (const auto type :
+         { LibraryIndex::Type::Mod, LibraryIndex::Type::ResourcePack, LibraryIndex::Type::ShaderPack, LibraryIndex::Type::TexturePack }) {
+        if (name == LibraryIndex::typeDirName(type)) {
+            return true;
         }
     }
-    return result;
+    return false;
+}
+
+/** Works out what a payload is by opening it.
+ *
+ *  A file that is not in one of the four directories has to say what it is itself, and the
+ *  launcher already knows how to ask: this is the same identification it uses for a file dropped
+ *  onto an instance, so an archive in the root of the library ends up in the tab it would have
+ *  landed in there. Returns nothing for the kinds of file that cannot be installed into an
+ *  instance, such as a data pack or a world save. */
+std::optional<LibraryIndex::Type> sniffPayloadType(const QFileInfo& file)
+{
+    switch (ResourceUtils::identify(file)) {
+        case ModPlatform::ResourceType::Mod:
+            return LibraryIndex::Type::Mod;
+        case ModPlatform::ResourceType::ResourcePack:
+            return LibraryIndex::Type::ResourcePack;
+        case ModPlatform::ResourceType::TexturePack:
+            return LibraryIndex::Type::TexturePack;
+        case ModPlatform::ResourceType::ShaderPack:
+            return LibraryIndex::Type::ShaderPack;
+        default:
+            return std::nullopt;
+    }
+}
+
+/** What a notes file says: the description the user reads, and the few facts about the payload
+ *  that the payload itself does not carry. */
+struct Notes {
+    QString markdown;
+    LibraryIndex::Origin origin;
+    QString mcVersion;
+    QString name;
+    QString version;
+};
+
+/** Splits a notes file into its front matter and its description.
+ *
+ *  The front matter is only front matter if the file starts with "---" and has a matching line
+ *  later on. Anything else is the description as written, because guessing wrong there would eat
+ *  the user's text rather than a field of it. */
+Notes parseNotes(const QString& text)
+{
+    Notes notes;
+    const auto lines = text.split('\n');
+
+    int end = -1;
+    if (!lines.isEmpty() && lines.first().trimmed() == "---") {
+        for (int i = 1; i < lines.size(); i++) {
+            if (lines[i].trimmed() == "---") {
+                end = i;
+                break;
+            }
+        }
+    }
+
+    if (end < 0) {
+        notes.markdown = text.trimmed();
+        return notes;
+    }
+
+    for (int i = 1; i < end; i++) {
+        const auto line = lines[i];
+        const auto colon = line.indexOf(':');
+        if (colon <= 0) {
+            continue;
+        }
+
+        const auto key = line.left(colon).trimmed().toLower();
+        const auto value = line.mid(colon + 1).trimmed();
+        if (value.isEmpty()) {
+            continue;
+        }
+
+        if (key == "provider") {
+            notes.origin.provider = value.compare("modrinth", Qt::CaseInsensitive) == 0 ? ModPlatform::ResourceProvider::MODRINTH
+                                                                                        : ModPlatform::ResourceProvider::FLAME;
+        } else if (key == "project-id") {
+            notes.origin.projectId = value;
+        } else if (key == "file-id") {
+            notes.origin.fileId = value;
+        } else if (key == "mc-version") {
+            notes.mcVersion = value;
+        } else if (key == "name") {
+            notes.name = value;
+        } else if (key == "version") {
+            notes.version = value;
+        }
+    }
+
+    notes.markdown = lines.mid(end + 1).join('\n').trimmed();
+    return notes;
+}
+
+QString renderNotes(const LibraryIndex::Entry& entry, const QString& markdown)
+{
+    const auto& origin = entry.origin;
+    const auto& mcVersion = entry.details.mcversion;
+
+    QString text;
+    if (origin.isValid() || !mcVersion.isEmpty()) {
+        text += "---\n";
+        if (origin.isValid()) {
+            text += QString("provider: %1\n").arg(ModPlatform::ProviderCapabilities::name(origin.provider));
+            text += QString("project-id: %1\n").arg(origin.projectId);
+            if (!origin.fileId.isEmpty()) {
+                text += QString("file-id: %1\n").arg(origin.fileId);
+            }
+        }
+        // The versions a project says its file is for, which a jar does not record anywhere the
+        // page's filter can read. Writing them down here is what keeps the file from being offered
+        // to an instance it was never built for.
+        if (!mcVersion.isEmpty()) {
+            text += QString("mc-version: %1\n").arg(mcVersion);
+        }
+        text += "---\n";
+    }
+
+    if (!markdown.isEmpty()) {
+        text += markdown;
+        text += "\n";
+    }
+
+    return text;
 }
 }  // namespace
 
@@ -90,7 +175,22 @@ LibraryIndex::LibraryIndex(QString rootDir) : m_root(std::move(rootDir)) {}
 
 QString LibraryIndex::typeDirName(Type type)
 {
-    return ::typeDirName(type);
+    switch (type) {
+        case Type::Mod:
+            return "mods";
+        case Type::ResourcePack:
+            return "resourcepacks";
+        case Type::ShaderPack:
+            return "shaderpacks";
+        case Type::TexturePack:
+            return "texturepacks";
+    }
+    return "mods";
+}
+
+QString LibraryIndex::notesPathFor(const QString& payloadPath)
+{
+    return payloadPath + ".md";
 }
 
 QString LibraryIndex::makeId(Type type, const ModDetails& details, const QString& fileName)
@@ -108,231 +208,134 @@ QString LibraryIndex::absoluteFilePath(const Entry& entry) const
     return FS::PathCombine(m_root, entry.file);
 }
 
-QJsonObject LibraryIndex::toJson(const Entry& entry)
+bool LibraryIndex::rescan(QString* error)
 {
-    QJsonObject obj;
-    obj["id"] = entry.id;
-    obj["type"] = typeDirName(entry.type);
-    obj["file"] = entry.file;
-    if (entry.addedAt.isValid()) {
-        obj["addedAt"] = entry.addedAt.toString(Qt::ISODate);
+    if (QFileInfo::exists(m_root) && !QFileInfo(m_root).isReadable()) {
+        if (error) {
+            *error = QObject::tr("The local files folder cannot be read: %1").arg(m_root);
+        }
+        return false;
     }
 
-    const ModDetails& d = entry.details;
-    if (!d.mod_id.isEmpty()) {
-        obj["modId"] = d.mod_id;
-    }
-    if (!d.name.isEmpty()) {
-        obj["name"] = d.name;
-    }
-    if (!d.version.isEmpty()) {
-        obj["version"] = d.version;
-    }
-    if (!d.mcversion.isEmpty()) {
-        obj["mcVersion"] = d.mcversion;
-    }
-    if (!d.description.isEmpty()) {
-        obj["description"] = d.description;
-    }
-    if (!d.homeurl.isEmpty()) {
-        obj["homepage"] = d.homeurl;
-    }
-    if (!d.authors.isEmpty()) {
-        obj["authors"] = QJsonArray::fromStringList(d.authors);
-    }
-    if (!d.dependencies.isEmpty()) {
-        obj["dependencies"] = QJsonArray::fromStringList(d.dependencies);
-    }
-
-    if (!entry.projectId.isEmpty()) {
-        QJsonObject source;
-        source["provider"] = ModPlatform::ProviderCapabilities::name(entry.provider);
-        source["projectId"] = entry.projectId;
-        source["fileId"] = entry.fileId;
-        obj["source"] = source;
-    }
-
-    return obj;
-}
-
-LibraryIndex::Entry LibraryIndex::fromJson(const QJsonObject& obj)
-{
-    Entry entry;
-    entry.id = obj.value("id").toString();
-    entry.file = obj.value("file").toString();
-
-    const auto typeName = obj.value("type").toString();
-    if (typeName == "resourcepacks") {
-        entry.type = Type::ResourcePack;
-    } else if (typeName == "shaderpacks") {
-        entry.type = Type::ShaderPack;
-    } else if (typeName == "texturepacks") {
-        entry.type = Type::TexturePack;
-    } else {
-        entry.type = Type::Mod;
-    }
-
-    ModDetails& d = entry.details;
-    d.mod_id = obj.value("modId").toString();
-    d.name = obj.value("name").toString();
-    d.version = obj.value("version").toString();
-    d.mcversion = obj.value("mcVersion").toString();
-    d.description = obj.value("description").toString();
-    d.homeurl = obj.value("homepage").toString();
-    d.authors = toStringList(obj.value("authors"));
-    d.dependencies = toStringList(obj.value("dependencies"));
-
-    const auto source = obj.value("source").toObject();
-    if (!source.isEmpty()) {
-        entry.projectId = source.value("projectId").toString();
-        entry.fileId = source.value("fileId").toString();
-    }
-
-    entry.addedAt = QDateTime::fromString(obj.value("addedAt").toString(), Qt::ISODate);
-
-    return entry;
-}
-
-void LibraryIndex::flagMissingFiles()
-{
-    for (auto& entry : m_entries) {
-        entry.broken = !isSafeRelativePath(entry.file) || !QFileInfo::exists(absoluteFilePath(entry));
-    }
-}
-
-bool LibraryIndex::load(QString* error)
-{
     m_entries.clear();
 
-    const QString manifest = manifestPath();
-    if (!QFileInfo::exists(manifest)) {
-        // No manifest yet, but the type directories may still hold files the user put there by
-        // hand, so discovery has to run in this branch too. Returning early here is what made a
-        // library with files in it look permanently empty.
-        flagMissingFiles();
-        if (discoverUnlistedFiles() || backfillDetails()) {
-            save();
-        }
-        return true;
+    for (const auto type : { Type::Mod, Type::ResourcePack, Type::ShaderPack, Type::TexturePack }) {
+        scanDirectory(QDir(FS::PathCombine(m_root, typeDirName(type))), type);
     }
+    // Everything else has to say what it is itself. This pass skips the directories above, which
+    // have already been read, so a payload cannot end up listed twice.
+    scanDirectory(QDir(m_root), std::nullopt);
 
-    QFile file(manifest);
-    if (!file.open(QIODevice::ReadOnly)) {
-        if (error) {
-            *error = file.errorString();
-        }
-        return false;
-    }
-
-    QJsonParseError parseError{};
-    const auto doc = QJsonDocument::fromJson(file.readAll(), &parseError);
-    if (parseError.error != QJsonParseError::NoError) {
-        if (error) {
-            *error = parseError.errorString();
-        }
-        return false;
-    }
-
-    const auto entries = doc.object().value("entries").toArray();
-    for (const auto& value : entries) {
-        auto entry = fromJson(value.toObject());
-        if (entry.id.isEmpty() || entry.file.isEmpty()) {
-            continue;  // Without an id or a path there is nothing to address the entry by.
-        }
-        m_entries.append(std::move(entry));
-    }
-
-    flagMissingFiles();
-
-    if (discoverUnlistedFiles() || backfillDetails()) {
-        // Record what was found so the next load does not have to guess again.
-        save();
-    }
     return true;
 }
 
-/** Adds entries for files that sit in a type directory but are not in the manifest.
- *
- *  A user who drops a jar into localfiles/mods/ expects to find it in the library, and reading
- *  only the manifest made such files invisible, which looked like the library being broken rather
- *  than empty. Entries found this way carry just the file name, so their description starts empty
- *  until the user fills it in.
- *
- *  Returns true when anything was added. */
-bool LibraryIndex::discoverUnlistedFiles()
+void LibraryIndex::scanDirectory(const QDir& dir, std::optional<Type> insideType)
 {
-    bool added = false;
+    if (!dir.exists()) {
+        return;
+    }
 
-    for (const auto type : { Type::Mod, Type::ResourcePack, Type::ShaderPack, Type::TexturePack }) {
-        const QDir typeDir(FS::PathCombine(m_root, typeDirName(type)));
-        if (!typeDir.exists()) {
+    for (const auto& info : dir.entryInfoList(QDir::Files | QDir::NoSymLinks)) {
+        // A notes file describes the payload it is named after; it is not a payload itself.
+        if (info.fileName().endsWith(".md", Qt::CaseInsensitive)) {
             continue;
         }
 
-        for (const auto& info : typeDir.entryInfoList(QDir::Files | QDir::NoSymLinks)) {
-            const QString relative = QDir(m_root).relativeFilePath(info.absoluteFilePath());
-            const bool alreadyKnown = std::any_of(m_entries.cbegin(), m_entries.cend(), [&relative](const Entry& e) {
-                return e.file == relative;
-            });
-            if (alreadyKnown) {
-                continue;
-            }
+        const auto path = info.absoluteFilePath();
 
-            Entry entry;
-            entry.type = type;
-            entry.file = relative;
-            entry.addedAt = QDateTime::currentDateTime();
-
-            // Take whatever the file itself says about itself; the name is the only fallback.
-            if (!readModDetails(info, entry.details) || entry.details.name.isEmpty()) {
-                entry.details.name = info.completeBaseName();
-            }
-
-            // The id is derived after the metadata is known, because for mods it is the mod id.
-            entry.id = makeId(type, entry.details, info.fileName());
-            if (find(entry.id)) {
-                continue;  // Same identity as an entry already in the manifest.
-            }
-            m_entries.append(std::move(entry));
-            added = true;
+        // Whatever opening the file told us last time is only worth keeping while the file itself
+        // is unchanged. Everything that is not put back here is forgotten, so the cache cannot
+        // outgrow the library.
+        auto facts = m_cache.take(path);
+        if (facts.size != info.size() || facts.modified != info.lastModified()) {
+            facts = CachedPayload{};
+            facts.size = info.size();
+            facts.modified = info.lastModified();
         }
+
+        auto type = insideType;
+        if (!type) {
+            if (!facts.sniffedType) {
+                facts.sniffedType = sniffPayloadType(info);
+            }
+            type = facts.sniffedType;
+        }
+        if (!type) {
+            m_cache.insert(path, facts);
+            continue;  // Nothing this library can install anywhere.
+        }
+
+        addScannedFile(info, *type, QDir(m_root).relativeFilePath(path), facts);
+        m_cache.insert(path, facts);
     }
 
-    return added;
+    for (const auto& subDir : dir.entryInfoList(QDir::Dirs | QDir::NoDotAndDotDot | QDir::NoSymLinks)) {
+        // The four type directories are read on their own, from the library root.
+        if (!insideType && isTypeDirName(subDir.fileName())) {
+            continue;
+        }
+        scanDirectory(QDir(subDir.absoluteFilePath()), insideType);
+    }
 }
 
-bool LibraryIndex::save(QString* error) const
+void LibraryIndex::addScannedFile(const QFileInfo& file, Type type, const QString& relative, CachedPayload& facts)
 {
-    QJsonArray entries;
-    for (const auto& entry : m_entries) {
-        entries.append(toJson(entry));
-    }
+    Entry entry;
+    entry.type = type;
+    entry.file = relative;
+    entry.addedAt = file.lastModified();
 
-    QJsonObject root;
-    root["version"] = kManifestVersion;
-    root["entries"] = entries;
-
-    // QSaveFile writes to a temporary and renames, so an interrupted save leaves the previous
-    // manifest intact rather than a truncated one.
-    QSaveFile file(manifestPath());
-    if (!file.open(QIODevice::WriteOnly)) {
-        if (error) {
-            *error = file.errorString();
+    if (type == Type::Mod) {
+        if (!facts.details) {
+            ModDetails read;
+            if (readModDetails(file, read)) {
+                facts.details = read;
+            } else {
+                facts.details = ModDetails{};  // Read, and there was nothing to find.
+            }
         }
-        return false;
+        entry.details = *facts.details;
     }
 
-    file.write(QJsonDocument(root).toJson(QJsonDocument::Indented));
-    if (!file.commit()) {
-        if (error) {
-            *error = file.errorString();
+    const auto notesPath = notesPathFor(file.absoluteFilePath());
+    if (QFileInfo::exists(notesPath)) {
+        QFile notesFile(notesPath);
+        if (notesFile.open(QIODevice::ReadOnly)) {
+            const auto notes = parseNotes(QString::fromUtf8(notesFile.readAll()));
+            entry.notes = notes.markdown;
+            entry.origin = notes.origin;
+
+            // The notes are allowed to correct the payload, which is the only way to fix a name
+            // or a version that the file itself gets wrong.
+            if (!notes.name.isEmpty()) {
+                entry.details.name = notes.name;
+            }
+            if (!notes.version.isEmpty()) {
+                entry.details.version = notes.version;
+            }
+            if (!notes.mcVersion.isEmpty()) {
+                entry.details.mcversion = notes.mcVersion;
+            }
         }
-        return false;
     }
-    return true;
+
+    if (entry.details.name.isEmpty()) {
+        entry.details.name = file.completeBaseName();
+    }
+
+    // The id is derived after the metadata is known, because for mods it is the mod id.
+    entry.id = makeId(type, entry.details, file.fileName());
+    if (const auto* clash = find(entry.id)) {
+        // Two payloads claiming the same mod and version, which a folder people copy into by hand
+        // can easily end up with. One of them has to lose, and it should not be a coin toss.
+        qWarning() << "Ignoring" << entry.file << "because" << clash->file << "is already the same resource";
+        return;
+    }
+
+    m_entries.append(std::move(entry));
 }
 
-bool LibraryIndex::importPayload(Type type, const QString& sourceFilePath, QString& relativePath, QString* error)
+bool LibraryIndex::add(Entry& entry, const QString& sourceFilePath, QString* error)
 {
     const QFileInfo source(sourceFilePath);
     if (!source.isFile()) {
@@ -342,7 +345,7 @@ bool LibraryIndex::importPayload(Type type, const QString& sourceFilePath, QStri
         return false;
     }
 
-    const QDir typeDir(FS::PathCombine(m_root, typeDirName(type)));
+    const QDir typeDir(FS::PathCombine(m_root, typeDirName(entry.type)));
     if (!typeDir.mkpath(".")) {
         if (error) {
             *error = QObject::tr("Could not create the library directory: %1").arg(typeDir.absolutePath());
@@ -350,18 +353,17 @@ bool LibraryIndex::importPayload(Type type, const QString& sourceFilePath, QStri
         return false;
     }
 
+    // The caller usually knows the name the file should have in the library - the one the project
+    // published it under - so that wins over the name of the temporary copy it arrived as.
+    const auto requested = entry.file.isEmpty() ? source.fileName() : QFileInfo(entry.file).fileName();
+
     // Strip characters the destination filesystem would reject rather than silently mangling the
     // name, keeping the extension so mod loaders still recognise the file.
-    QString name = FS::RemoveInvalidPathChars(source.fileName());
+    QString name = FS::RemoveInvalidPathChars(requested);
     if (name.isEmpty()) {
-        name = makeId(type, ModDetails(), source.fileName()) + source.suffix();
+        name = makeId(entry.type, ModDetails(), source.fileName()) + source.suffix();
     }
     const QString target = typeDir.absoluteFilePath(name);
-
-    if (QFileInfo::exists(target) && QFileInfo(target).size() == source.size()) {
-        relativePath = QDir(m_root).relativeFilePath(target);
-        return true;  // Identical payload already present, keep the single copy.
-    }
 
     // overwrite(true) is required: FS::copy refuses to replace an existing file otherwise, and an
     // updated build of a mod usually keeps the same file name.
@@ -372,107 +374,78 @@ bool LibraryIndex::importPayload(Type type, const QString& sourceFilePath, QStri
         return false;
     }
 
-    relativePath = QDir(m_root).relativeFilePath(target);
-    return true;
-}
+    entry.file = QDir(m_root).relativeFilePath(target);
+    entry.addedAt = QFileInfo(target).lastModified();
 
-bool LibraryIndex::add(Entry& entry, const QString& sourceFilePath, QString* error)
-{
-    Entry updated = entry;
-
-    // A file added by hand arrives with no description at all. Reading it here means the id is
-    // derived from the real mod id rather than from the file name, and the library shows the same
-    // name and version the loader will show.
-    if (updated.details.mod_id.isEmpty() && updated.details.version.isEmpty()) {
-        ModDetails parsed;
-        if (readModDetails(QFileInfo(sourceFilePath), parsed)) {
-            updated.details = parsed;
+    // A payload the launcher fetched for the library is still worth opening: what the project
+    // calls a version and what the jar calls it are not always the same thing.
+    if (entry.type == Type::Mod && entry.details.mod_id.isEmpty() && entry.details.version.isEmpty()) {
+        ModDetails read;
+        if (readModDetails(QFileInfo(target), read)) {
+            entry.details = read;
         }
     }
-    if (updated.details.name.isEmpty()) {
-        updated.details.name = QFileInfo(sourceFilePath).completeBaseName();
+    if (entry.details.name.isEmpty()) {
+        entry.details.name = QFileInfo(target).completeBaseName();
     }
 
-    updated.id = updated.id.isEmpty() ? makeId(updated.type, updated.details, QFileInfo(sourceFilePath).fileName()) : updated.id;
-    if (!updated.addedAt.isValid()) {
-        updated.addedAt = QDateTime::currentDateTime();
-    }
+    entry.id = entry.id.isEmpty() ? makeId(entry.type, entry.details, name) : entry.id;
 
-    QString previousFile;
-    if (const auto* existing = find(updated.id); existing) {
-        previousFile = existing->file;
-    }
-
-    if (!importPayload(updated.type, sourceFilePath, updated.file, error)) {
+    if (!writeNotes(entry, error)) {
         return false;
     }
 
-    for (int i = 0; i < m_entries.size(); i++) {
-        if (m_entries[i].id == updated.id) {
-            m_entries[i] = updated;
-            break;
+    if (auto* existing = find(entry.id)) {
+        // An updated build usually arrives under a new file name. Keeping the old payload would
+        // leave two copies of one mod and version in the folder, which the next scan would then
+        // only report as a clash, so it goes with its notes.
+        if (existing->file != entry.file) {
+            const auto oldPath = absoluteFilePath(*existing);
+            QFile::remove(oldPath);
+            QFile::remove(notesPathFor(oldPath));
         }
+        *existing = entry;
+    } else {
+        m_entries.append(entry);
     }
-    if (!find(updated.id)) {
-        m_entries.append(updated);
-    }
-
-    // The replaced entry may have been the only reference to its payload.
-    if (!previousFile.isEmpty() && previousFile != updated.file) {
-        const bool stillUsed = std::any_of(m_entries.cbegin(), m_entries.cend(), [&previousFile](const Entry& e) {
-            return e.file == previousFile;
-        });
-        if (!stillUsed) {
-            QFile::remove(FS::PathCombine(m_root, previousFile));
-        }
-    }
-
-    if (!save(error)) {
-        return false;
-    }
-
-    flagMissingFiles();
-    entry = updated;
     return true;
 }
 
-bool LibraryIndex::remove(const QString& id, QString* error)
+bool LibraryIndex::writeNotes(const Entry& entry, QString* error)
 {
-    const auto it = std::find_if(m_entries.begin(), m_entries.end(), [&id](const Entry& e) { return e.id == id; });
-    if (it == m_entries.end()) {
+    if (!entry.origin.isValid() && entry.details.mcversion.isEmpty()) {
+        // Nothing the notes file would add. A description that does not exist yet is the user's to
+        // write, and an empty file next to every payload would only be in the way.
         return true;
     }
 
-    const QString file = it->file;
-    m_entries.erase(it);
+    const auto path = notesPathFor(absoluteFilePath(entry));
 
-    const bool stillUsed = std::any_of(m_entries.cbegin(), m_entries.cend(), [&file](const Entry& e) { return e.file == file; });
-    if (!stillUsed && isSafeRelativePath(file)) {
-        QFile::remove(FS::PathCombine(m_root, file));
+    // A description the user has written belongs to them; only the front matter is rewritten.
+    QString markdown = entry.notes;
+    if (QFileInfo::exists(path)) {
+        QFile existing(path);
+        if (existing.open(QIODevice::ReadOnly)) {
+            markdown = parseNotes(QString::fromUtf8(existing.readAll())).markdown;
+        }
     }
 
-    return save(error);
-}
-
-bool LibraryIndex::update(const Entry& entry, QString* error)
-{
-    auto* existing = find(entry.id);
-    if (!existing) {
+    QSaveFile file(path);
+    if (!file.open(QIODevice::WriteOnly)) {
         if (error) {
-            *error = QObject::tr("No such library entry: %1").arg(entry.id);
+            *error = file.errorString();
         }
         return false;
     }
 
-    existing->details = entry.details;
-
-    if (!save(error)) {
+    file.write(renderNotes(entry, markdown).toUtf8());
+    if (!file.commit()) {
+        if (error) {
+            *error = file.errorString();
+        }
         return false;
     }
 
-    // A renamed or re-versioned entry could in principle point at a different payload, though the
-    // path is untouched here, so re-check instead of trusting the flag set at load time.
-    flagMissingFiles();
     return true;
 }
 
@@ -486,30 +459,4 @@ const LibraryIndex::Entry* LibraryIndex::find(const QString& id) const
 {
     const auto it = std::find_if(m_entries.cbegin(), m_entries.cend(), [&id](const Entry& e) { return e.id == id; });
     return it == m_entries.cend() ? nullptr : &*it;
-}
-
-bool LibraryIndex::backfillDetails()
-{
-    bool changed = false;
-
-    for (auto& entry : m_entries) {
-        // Only mods carry metadata the launcher can read back out of the file; a resource pack or a
-        // shader pack says nothing useful beyond its file name.
-        if (entry.type != Type::Mod || entry.broken) {
-            continue;
-        }
-        if (!entry.details.mod_id.isEmpty() || !entry.details.version.isEmpty()) {
-            continue;  // Already described, whether by a platform or by an earlier run.
-        }
-
-        ModDetails parsed;
-        if (!readModDetails(QFileInfo(absoluteFilePath(entry)), parsed) || parsed.name.isEmpty()) {
-            continue;  // Not a mod we can read; the file name stays.
-        }
-
-        entry.details = parsed;
-        changed = true;
-    }
-
-    return changed;
 }

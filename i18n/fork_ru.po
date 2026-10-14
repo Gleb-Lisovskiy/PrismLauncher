@@ -10,113 +10,17 @@ msgstr ""
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
 
-msgctxt "LibraryDialog"
-msgid "Added %n file(s).\n\n"
-msgstr "Добавлено файлов: %n.\n\n"
+msgctxt "LauncherPage"
+msgid "&Local Files:"
+msgstr "&Локальные файлы:"
 
-msgctxt "LibraryDialog"
-msgid "Cannot Install"
-msgstr "Не удаётся установить"
+msgctxt "LauncherPage"
+msgid "Folder holding mods, resource packs, texture packs and shader packs you keep across instances. Anything dropped into it shows up under the 'Local Files' tab of the corresponding download dialog; a markdown file named after a file, with a .md suffix, describes it."
+msgstr "Папка с модами, ресурспаками, текстурпаками и шейдерпаками, общими для всех инстансов. Всё, что в неё положено, появляется на вкладке «Локальные файлы» в окне загрузки; файл markdown с тем же именем и суффиксом .md описывает ресурс."
 
-msgctxt "LibraryDialog"
-msgid "Could Not Remove"
-msgstr "Не удалось убрать"
-
-msgctxt "LibraryDialog"
-msgid "Could Not Save"
-msgstr "Не удалось сохранить"
-
-msgctxt "LibraryDialog"
-msgid "Edit Description..."
-msgstr "Изменить описание..."
-
-msgctxt "LibraryDialog"
-msgid "Install into Instance"
-msgstr "Установить в инстанс"
-
-msgctxt "LibraryDialog"
-msgid "Installed"
-msgstr "Установлено"
-
-msgctxt "LibraryDialog"
-msgid "Installed into '%1':\n%2"
-msgstr "Установлено в «%1»:\n%2"
-
-msgctxt "LibraryDialog"
-msgid "Remove %n selected entries from the library?"
-msgstr "Убрать %n выбранных записей из библиотеки?"
-
-msgctxt "LibraryDialog"
-msgid "Remove '%1' from the library?"
-msgstr "Убрать «%1» из библиотеки?"
-
-msgctxt "LibraryDialog"
-msgid "Remove From Library"
-msgstr "Убрать из библиотеки"
-
-msgctxt "LibraryDialog"
-msgid "Resource Type"
-msgstr "Тип ресурса"
-
-msgctxt "LibraryDialog"
-msgid "Resource files (*.jar *.zip);;All files (*)"
-msgstr "Файлы ресурсов (*.jar *.zip);;Все файлы (*)"
-
-msgctxt "LibraryDialog"
-msgid "Some Entries Were Not Installed"
-msgstr "Некоторые записи не установлены"
-
-msgctxt "LibraryDialog"
-msgid "Some Files Were Not Added"
-msgstr "Некоторые файлы не добавлены"
-
-msgctxt "LibraryDialog"
-msgid "This instance does not use the standard mod folder layout."
-msgstr "В этом инстансе нет стандартной папки модов."
-
-msgctxt "LibraryDialog"
-msgid "What kind of file are you adding?"
-msgstr "Что за файлы вы добавляете?"
-
-msgctxt "LibraryDialogForm"
-msgid "Add Files..."
-msgstr "Добавить файлы..."
-
-msgctxt "LibraryDialogForm"
-msgid "Edit Description..."
-msgstr "Изменить описание..."
-
-msgctxt "LibraryDialogForm"
-msgid "Files here are stored once and can be installed into any instance."
-msgstr "Файлы хранятся здесь в единственном экземпляре и ставятся в любой инстанс."
-
-msgctxt "LibraryDialogForm"
-msgid "Filter by name, mod ID or version"
-msgstr "Фильтр по имени, mod ID или версии"
-
-msgctxt "LibraryDialogForm"
-msgid "Install Selected"
-msgstr "Установить выбранные"
-
-msgctxt "LibraryDialogForm"
-msgid "Install into:"
-msgstr "Установить в:"
-
-msgctxt "LibraryDialogForm"
-msgid "Library"
-msgstr "Библиотека"
-
-msgctxt "LibraryDialogForm"
-msgid "Open Folder"
-msgstr "Открыть папку"
-
-msgctxt "LibraryDialogForm"
-msgid "Remove"
-msgstr "Удалить"
-
-msgctxt "LibraryDialogForm"
-msgid "Search:"
-msgstr "Поиск:"
+msgctxt "LauncherPage"
+msgid "Local Files Folder"
+msgstr "Папка локальных файлов"
 
 msgctxt "LibraryDownloadTask"
 msgid "Could not create a temporary folder for the download."
@@ -142,42 +46,6 @@ msgctxt "LibraryDownloadTask"
 msgid "The library is not available."
 msgstr "Библиотека недоступна."
 
-msgctxt "LibraryModel"
-msgid "File is missing"
-msgstr "Файл отсутствует"
-
-msgctxt "LibraryModel"
-msgid "Mod ID"
-msgstr "Mod ID"
-
-msgctxt "LibraryModel"
-msgid "Name"
-msgstr "Имя"
-
-msgctxt "LibraryModel"
-msgid "Ready"
-msgstr "Готово"
-
-msgctxt "LibraryModel"
-msgid "Size"
-msgstr "Размер"
-
-msgctxt "LibraryModel"
-msgid "Source"
-msgstr "Источник"
-
-msgctxt "LibraryModel"
-msgid "Status"
-msgstr "Статус"
-
-msgctxt "LibraryModel"
-msgid "Type"
-msgstr "Тип"
-
-msgctxt "LibraryModel"
-msgid "Version"
-msgstr "Версия"
-
 msgctxt "LocalResourceCopyTask"
 msgid "Copying %1"
 msgstr "Копирование: %1"
@@ -194,38 +62,6 @@ msgctxt "ModFolderPage"
 msgid "Get mods from your local files folder or from online mod platforms"
 msgstr "Взять моды из папки локальных файлов или с онлайн-платформ"
 
-msgctxt "NoSuchContext"
-msgid "Library"
-msgstr "Библиотека"
-
-msgctxt "QObject"
-msgid "%1: %2"
-msgstr "%1: %2"
-
-msgctxt "QObject"
-msgid "%1: could not be copied into the instance"
-msgstr "%1: не удалось скопировать в инстанс"
-
-msgctxt "QObject"
-msgid "%1: the file is missing from the library"
-msgstr "%1: файл отсутствует в библиотеке"
-
-msgctxt "QObject"
-msgid "%1: unsupported resource type"
-msgstr "%1: неподдерживаемый тип ресурса"
-
-msgctxt "QObject"
-msgid "&Description:"
-msgstr "&Описание:"
-
-msgctxt "QObject"
-msgid "&Name:"
-msgstr "&Имя:"
-
-msgctxt "QObject"
-msgid "&Version:"
-msgstr "&Версия:"
-
 msgctxt "QObject"
 msgid "Could not copy %1 into the library"
 msgstr "Не удалось скопировать %1 в библиотеку"
@@ -235,36 +71,12 @@ msgid "Could not create the library directory: %1"
 msgstr "Не удалось создать папку библиотеки: %1"
 
 msgctxt "QObject"
-msgid "Edit Description"
-msgstr "Изменить описание"
-
-msgctxt "QObject"
-msgid "Local file"
-msgstr "Локальный файл"
-
-msgctxt "QObject"
-msgid "Mod"
-msgstr "Мод"
-
-msgctxt "QObject"
 msgid "No such file: %1"
 msgstr "Нет такого файла: %1"
 
 msgctxt "QObject"
-msgid "No such library entry: %1"
-msgstr "Нет такой записи в библиотеке: %1"
-
-msgctxt "QObject"
-msgid "Resource pack"
-msgstr "Ресурспак"
-
-msgctxt "QObject"
-msgid "Shader pack"
-msgstr "Шейдерпак"
-
-msgctxt "QObject"
-msgid "Texture pack"
-msgstr "Текстурпак"
+msgid "The local files folder cannot be read: %1"
+msgstr "Не удалось прочитать папку локальных файлов: %1"
 
 msgctxt "ResourceDownload::LocalModPage"
 msgid "Local Files"
@@ -278,17 +90,25 @@ msgctxt "ResourceDownload::LocalShaderPackPage"
 msgid "Local Files"
 msgstr "Локальные файлы"
 
+msgctxt "ResourceDownload::LocalTexturePackPage"
+msgid "Local Files"
+msgstr "Локальные файлы"
+
+msgctxt "ResourceDownload::ModModel"
+msgid "A network error occurred. Could not load project versions: %1"
+msgstr "Ошибка сети. Не удалось загрузить версии проекта: %1"
+
 msgctxt "ResourceDownload::ResourcePage"
 msgid "'%1' does not allow downloads from third-party launchers and no project page is known."
 msgstr "«%1» не разрешает загрузку сторонними лаунчерами, и страница проекта неизвестна."
 
 msgctxt "ResourceDownload::ResourcePage"
-msgid "'%1' is now in your library. Open it from the Library button in the toolbar to install it into other instances."
-msgstr "«%1» теперь в библиотеке. Откройте его кнопкой «Библиотека» на панели, чтобы установить в другие инстансы."
+msgid "'%1' is now in your local files. It appears under the 'Local Files' tab whenever you install mods, resource packs or shader packs into an instance."
+msgstr "«%1» теперь в локальных файлах. Он появится на вкладке «Локальные файлы», когда вы ставите моды, ресурспаки или шейдерпаки в инстанс."
 
 msgctxt "ResourceDownload::ResourcePage"
-msgid "Added to Library"
-msgstr "Добавлено в библиотеку"
+msgid "Added to Local Files"
+msgstr "Добавлено в локальные файлы"
 
 msgctxt "ResourceDownload::ResourcePage"
 msgid "Install an incompatible version?"
@@ -298,6 +118,18 @@ msgctxt "ResourcePackPage"
 msgid "Get resource packs from your local files folder or from online mod platforms"
 msgstr "Взять ресурспаки из папки локальных файлов или с онлайн-платформ"
 
+msgctxt "ResourcePage"
+msgid "Download this version into your local files folder, where it can be installed into any instance later without downloading it again."
+msgstr "Скачать эту версию в папку локальных файлов, чтобы потом ставить её в любой инстанс без повторной загрузки."
+
+msgctxt "ResourcePage"
+msgid "Save to Local Files"
+msgstr "Сохранить в локальные файлы"
+
 msgctxt "ShaderPackPage"
 msgid "Get shader packs from your local files folder or from online mod platforms"
 msgstr "Взять шейдерпаки из папки локальных файлов или с онлайн-платформ"
+
+msgctxt "TexturePackPage"
+msgid "Get texture packs from your local files folder or from online mod platforms"
+msgstr "Взять текстурпаки из папки локальных файлов или с онлайн-платформ"

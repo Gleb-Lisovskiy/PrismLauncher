@@ -19,10 +19,34 @@ Two things worth knowing before editing:
 
 ## Regenerating
 
+`lupdate` has to be pointed at the files the fork touched, not the whole tree: it copies every
+translatable string it finds into `fork.ts`, and a string that upstream also uses would then be
+pulled into the catalog for a context the fork has no business translating.
+
 ```sh
-lupdate -locations none -no-obsolete <the fork's sources> -ts i18n/fork.ts
+/usr/lib/qt6/bin/lupdate -locations none -no-obsolete -no-ui-lines \
+    launcher/minecraft/mod/LibraryIndex.cpp \
+    launcher/minecraft/mod/tasks/LibraryDownloadTask.cpp \
+    launcher/minecraft/mod/tasks/LocalResourceCopyTask.cpp \
+    launcher/ui/dialogs/ResourceDownloadDialog.cpp \
+    launcher/ui/pages/global/LauncherPage.cpp \
+    launcher/ui/pages/global/LauncherPage.ui \
+    launcher/ui/pages/instance/ModFolderPage.cpp \
+    launcher/ui/pages/instance/ResourcePackPage.cpp \
+    launcher/ui/pages/instance/ShaderPackPage.cpp \
+    launcher/ui/pages/instance/TexturePackPage.cpp \
+    launcher/ui/pages/modplatform/library/LocalResourcePage.h \
+    launcher/ui/pages/modplatform/ModModel.cpp \
+    launcher/ui/pages/modplatform/ResourceModel.cpp \
+    launcher/ui/pages/modplatform/ResourcePackPage.h \
+    launcher/ui/pages/modplatform/ResourcePage.cpp \
+    launcher/ui/pages/modplatform/ResourcePage.ui \
+    launcher/ui/pages/modplatform/ShaderPackPage.h \
+    launcher/ui/pages/modplatform/TexturePackPage.h \
+    -ts i18n/fork.ts
 cd i18n && python3 make-fork-catalog.py
 ```
 
 The script reads the translations out of the dictionary at the top of `make-fork-catalog.py` and
-writes `fork_ru.po`. Run it from the `i18n` directory, next to the `.ts` it reads.
+writes `fork_ru.po`. Run it from the `i18n` directory, next to the `.ts` it reads. A dictionary key
+may be written `"Context|msgid"` to translate a string only where the fork wrote it.

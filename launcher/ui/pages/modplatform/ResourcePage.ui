@@ -84,8 +84,11 @@
      </item>
      <item row="1" column="0" colspan="2">
       <widget class="QPushButton" name="addToLibraryButton">
+       <property name="text">
+        <string>Save to Local Files</string>
+       </property>
        <property name="toolTip">
-        <string>Download this version into your library, where it can be installed into any instance.</string>
+        <string>Download this version into your local files folder, where it can be installed into any instance later without downloading it again.</string>
        </property>
       </widget>
      </item>
@@ -105,6 +108,8 @@
   <tabstop>packDescription</tabstop>
   <tabstop>sortByBox</tabstop>
   <tabstop>versionSelectionBox</tabstop>
+  <tabstop>addToLibraryButton</tabstop>
+  <tabstop>resourceSelectionButton</tabstop>
  </tabstops>
  <resources/>
  <connections/>

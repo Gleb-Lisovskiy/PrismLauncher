@@ -66,7 +66,18 @@ ResourceDownloadTask::ResourceDownloadTask(ModPlatform::IndexedPack::Ptr pack,
                                            QString downloadReason)
     : m_pack(std::move(pack)), m_pack_version(std::move(version)), m_pack_model(packs)
 {
-    if (isIndexed) {
+    // A file already on disk is one the user picked out of their own local files rather than
+    // something to be fetched. Its downloadUrl is a path, not a URL, and asking the network for a
+    // path fails with ProtocolUnknownError, so it is copied instead.
+    const bool fromLocalFiles = QFileInfo::exists(m_pack_version.downloadUrl);
+
+    // A file from the local files only has a project to record when the launcher put it there
+    // itself, which is what its file id testifies to. A file dropped into the folder by hand has
+    // none, and writing an invented id would make a later update check offer a different project's
+    // file. It is installed as an ordinary, unmanaged file instead.
+    const bool hasOrigin = !m_pack_version.fileId.toString().isEmpty();
+
+    if (isIndexed && (!fromLocalFiles || hasOrigin)) {
         m_update_task.reset(new LocalResourceUpdateTask(m_pack_model->indexDir(), *m_pack, m_pack_version));
         connect(m_update_task.get(), &LocalResourceUpdateTask::hasOldResource, this, &ResourceDownloadTask::hasOldResource);
 
@@ -75,10 +86,8 @@ ResourceDownloadTask::ResourceDownloadTask(ModPlatform::IndexedPack::Ptr pack,
 
     const auto destination = m_pack_model->dir().absoluteFilePath(getFilename());
 
-    if (QFileInfo::exists(m_pack_version.downloadUrl)) {
-        // Not a URL but a file already on disk: the user picked it out of their own library.
-        // Asking the network for a path fails with ProtocolUnknownError, so copy it instead. The
-        // task still goes through the queue, which is what puts it in the review box and makes
+    if (fromLocalFiles) {
+        // The task still goes through the queue, which is what puts it in the review box and makes
         // cancelling actually cancel something.
         m_copyTask = Task::Ptr(new LocalResourceCopyTask(m_pack_version.downloadUrl, destination));
         connect(m_copyTask.get(), &Task::succeeded, this, &ResourceDownloadTask::downloadSucceeded);

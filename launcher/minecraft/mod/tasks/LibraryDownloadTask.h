@@ -10,13 +10,11 @@
 #include "net/Download.h"
 #include "tasks/Task.h"
 
-/** Downloads a file into the library and records it in the manifest.
+/** Downloads a file into the library, recording where it came from.
  *
  *  The download goes to a temporary file first and is only moved into place once it has completed,
- *  so an aborted or failed transfer cannot leave a half-written payload that the manifest would
- *  then point at. The manifest is written last: if that step fails the payload is removed again,
- *  because an unreferenced file is easier to spot than an entry with no file.
- */
+ *  so an aborted or failed transfer cannot leave a half-written payload in the library. The notes
+ *  file naming the project is written by LibraryIndex::add, after the payload itself is in place. */
 class LibraryDownloadTask : public Task {
     Q_OBJECT
 

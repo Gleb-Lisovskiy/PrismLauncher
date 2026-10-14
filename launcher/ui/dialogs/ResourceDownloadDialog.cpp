@@ -128,6 +128,17 @@ void ResourceDownloadDialog::initializeContainer()
     layout()->setContentsMargins(0, 0, 0, 0);
 #endif
 
+    // The local files folder is one people drop things into while the launcher is running, so it is
+    // re-read here rather than only at start-up. Files that have not changed are not opened again,
+    // which is what makes this affordable; without it a file copied in a moment ago would only show
+    // up after a restart.
+    if (auto* library = APPLICATION->library()) {
+        QString error;
+        if (!library->rescan(&error)) {
+            qWarning() << "Could not read the local files folder:" << error;
+        }
+    }
+
     m_container = new PageContainer(this, {}, this);
     m_container->setSizePolicy(QSizePolicy::Policy::Preferred, QSizePolicy::Policy::Expanding);
     m_container->layout()->setContentsMargins(0, 0, 0, 0);
@@ -394,6 +405,8 @@ TexturePackDownloadDialog::TexturePackDownloadDialog(QWidget* parent,
 QList<BasePage*> TexturePackDownloadDialog::getPages()
 {
     QList<BasePage*> pages;
+
+    pages.append(LocalTexturePackPage::create(this, *m_instance, APPLICATION->library()));
 
     auto* modrinthPage = ModrinthTexturePackPage::create(this, *m_instance);
     modrinthPage->setSuppressInitialSearch(m_suppressInitialSearch);

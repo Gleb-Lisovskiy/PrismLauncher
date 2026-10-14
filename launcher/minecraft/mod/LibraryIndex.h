@@ -4,38 +4,70 @@
 
 #pragma once
 
+#include <optional>
+
 #include <QDateTime>
 #include <QDir>
 #include <QHash>
-#include <QJsonObject>
 #include <QString>
 #include <QStringList>
 
-#include "FileSystem.h"
 #include "minecraft/mod/ModDetails.h"
 #include "modplatform/ModIndex.h"
 
 /** A user's own collection of mods and resource packs, stored outside of any instance.
  *
  *  Files are kept once in a shared directory and referenced by many instances, so building a
- *  modpack from a set of favourites does not duplicate hundreds of megabytes. Each entry keeps
- *  where it originally came from (provider, project and file ids) so that installing it into an
- *  instance can write the same metadata a direct download would have written, which keeps update
- *  checks working afterwards.
+ *  modpack from a set of favourites does not duplicate hundreds of megabytes.
  *
- *  On-disk layout, rooted at the directory handed to the constructor:
+ *  There is no manifest to keep in step: the directory is the list. Anything in it is picked up by
+ *  the next scan, and what a file is gets decided by where it was put, or failing that by what it
+ *  contains:
  *
- *      localfiles.json                 manifest, the only authoritative list of entries
- *      <type>/<filename>               the payload, one copy per entry
+ *      mods/            a mod
+ *      resourcepacks/   a resource pack
+ *      shaderpacks/     a shader pack
+ *      texturepacks/    a texture pack
+ *      anywhere else    identified by opening it, the same way a file dropped onto an instance is
  *
- *  The manifest is rewritten whenever entries change. A file present on disk but absent from the
- *  manifest is ignored, and an entry pointing at a missing file is reported as broken rather than
- *  silently dropped, so a hand-edited manifest degrades instead of losing data.
+ *  So the directories are a convenience rather than a requirement: a pile of archives in the root
+ *  of the library sorts itself into the right tab. A file put into one of the four directories is
+ *  taken at its word, because that placement was deliberate.
+ *
+ *  The description of a resource lives in a markdown file next to it, named after the payload with
+ *  an ".md" suffix - sodium.jar has its notes in sodium.jar.md. Its body is what the resource
+ *  dialog shows, rendered as markdown. Anything before a leading "---" line is front matter saying
+ *  what the launcher cannot work out on its own; only the fields that keep an installed copy
+ *  updateable are written there:
+ *
+ *      ---
+ *      provider: flame
+ *      project-id: 306612
+ *      file-id: 4567890
+ *      ---
+ *      # Sodium
+ *      ...
+ *
+ *  Every payload that was dropped into the directory by hand has no such file, which is perfectly
+ *  normal: it simply has no description, and nothing is invented for it.
  */
 class LibraryIndex {
    public:
     /** What kind of file an entry holds. Maps onto the instance folders it can be installed into. */
     enum class Type { Mod, ResourcePack, ShaderPack, TexturePack };
+
+    /** Where a payload came from, when the launcher fetched it itself.
+     *
+     *  A file the user copied in has no origin, and none is guessed for it. Writing a made-up
+     *  project id into an instance's metadata would make a later update check offer some other
+     *  project's file, which is worse than offering no update at all. */
+    struct Origin {
+        ModPlatform::ResourceProvider provider = ModPlatform::ResourceProvider::FLAME;
+        QString projectId;
+        QString fileId;
+
+        [[nodiscard]] bool isValid() const { return !projectId.isEmpty(); }
+    };
 
     struct Entry {
         QString id;
@@ -44,92 +76,88 @@ class LibraryIndex {
         /** Path relative to the library root. Never absolute, so the directory stays movable. */
         QString file;
 
+        /** What the payload says about itself. The name falls back to the file name. */
         ModDetails details;
 
-        /** Where the entry was added from. Empty when it came from a local file. */
-        ModPlatform::ResourceProvider provider = ModPlatform::ResourceProvider::FLAME;
-        QString projectId;
-        QString fileId;
+        /** Body of the notes file, in markdown. Empty when there is no notes file. */
+        QString notes;
 
+        Origin origin;
+
+        /** Last modification time of the payload. */
         QDateTime addedAt;
-
-        /** True when the payload is missing or unreadable on disk. */
-        bool broken = false;
     };
 
     explicit LibraryIndex(QString rootDir);
 
-    /** Root directory of the library. Created if it does not exist. */
+    /** Root directory of the library. */
     [[nodiscard]] QString rootDir() const { return m_root; }
 
-    /** Absolute path of an entry's payload, whether or not it currently exists. */
+    /** Absolute path of an entry's payload. */
     [[nodiscard]] QString absoluteFilePath(const Entry& entry) const;
 
-    /** Absolute path of the manifest. */
-    [[nodiscard]] QString manifestPath() const { return FS::PathCombine(m_root, "localfiles.json"); }
+    /** Path of the notes file belonging to a payload: the payload's path plus ".md". */
+    [[nodiscard]] static QString notesPathFor(const QString& payloadPath);
 
-    /** Reads the manifest. Entries whose file is missing are kept and flagged broken.
-     *  Returns false and fills error when the manifest exists but could not be read or parsed. */
-    bool load(QString* error = nullptr);
-
-    /** Writes the manifest. Returns false and fills error on failure. */
-    bool save(QString* error = nullptr) const;
+    /** Rebuilds the list from what is on disk.
+     *
+     *  Runs at start-up and again whenever the user is about to pick resources, so a file dropped
+     *  into the folder shows up without restarting the launcher. Payloads that have not changed
+     *  since the last scan are not opened again, which is what keeps that affordable. A library
+     *  directory that does not exist is not an error; it just means an empty library. */
+    bool rescan(QString* error = nullptr);
 
     [[nodiscard]] QList<Entry> entries() const { return m_entries; }
     [[nodiscard]] int size() const { return static_cast<int>(m_entries.size()); }
     [[nodiscard]] bool empty() const { return m_entries.isEmpty(); }
 
-    /** Adds or replaces an entry, copying the payload into the library.
-     *
-     *  The passed entry is filled in with the id, relative payload path and timestamp that were
-     *  assigned, so callers do not have to look them up again. An existing entry with the same id
-     *  is replaced. Returns false and fills error without touching the manifest on failure.
-     */
-    bool add(Entry& entry, const QString& sourceFilePath, QString* error = nullptr);
-
-    /** Removes an entry and, if no other entry references it, its payload. */
-    bool remove(const QString& id, QString* error = nullptr);
-
-    /** Replaces the description and metadata of an existing entry, keeping its identity.
-     *
-     *  Only the descriptive fields are taken from the argument; id, payload path and source are
-     *  kept, because those decide which file the entry points at and where it came from - and
-     *  changing them here would desynchronise the description from the payload. Returns false for
-     *  an unknown id. */
-    bool update(const Entry& entry, QString* error = nullptr);
-
     [[nodiscard]] Entry* find(const QString& id);
     [[nodiscard]] const Entry* find(const QString& id) const;
 
-    /** Stable identifier for an entry, used to keep re-adds from duplicating.
+    /** Copies a file into the library, with notes recording where it came from.
+     *
+     *  Used when the launcher downloads a file for the library. Files the user places in the
+     *  directory themselves are found by rescan() instead and do not come through here. The entry
+     *  is filled in with the id and payload path that were assigned; a payload of the same name is
+     *  replaced, but notes the user has written are kept. */
+    bool add(Entry& entry, const QString& sourceFilePath, QString* error = nullptr);
+
+    /** Directory of the library a type is filed under. */
+    [[nodiscard]] static QString typeDirName(Type type);
+
+    /** Stable identifier for an entry.
      *
      *  Identity is the loader-defined mod id plus the version, falling back to the file name when
      *  the mod id is unavailable. Including the version lets a library deliberately hold two
-     *  versions of the same mod, which modpack work needs, while re-adding the same version still
-     *  replaces it instead of piling up. */
+     *  versions of one mod, which modpack work needs, while re-adding the same version still
+     *  replaces rather than piles up. */
     [[nodiscard]] static QString makeId(Type type, const ModDetails& details, const QString& fileName);
 
-    /** Subdirectory of files/ used for a type. */
-    [[nodiscard]] static QString typeDirName(Type type);
-
    private:
-    /** Copies the payload into files/<type>/, reusing an identical existing file if one is there. */
-    [[nodiscard]] bool importPayload(Type type, const QString& sourceFilePath, QString& relativePath, QString* error);
-
-    void flagMissingFiles();
-
-    /** Picks up files that were placed in a type directory without going through add(). */
-    [[nodiscard]] bool discoverUnlistedFiles();
-
-    /** Fills in details that an entry is missing by re-reading its payload.
+    /** What opening a payload once told us, so a rescan does not open it again.
      *
-     *  Entries written before the library learned to read mod metadata carry nothing but a file
-     *  name, so this repairs them in place instead of waiting for the user to re-add the file. */
-    [[nodiscard]] bool backfillDetails();
+     *  Keyed by absolute path and kept only for files that were seen in the last scan, so it cannot
+     *  outgrow the library. */
+    struct CachedPayload {
+        qint64 size = 0;
+        QDateTime modified;
+        std::optional<Type> sniffedType;
+        std::optional<ModDetails> details;
+    };
 
-    [[nodiscard]] static QJsonObject toJson(const Entry& entry);
-    [[nodiscard]] static Entry fromJson(const QJsonObject& obj);
+    /** Adds every payload under a directory, descending into subdirectories.
+     *
+     *  insideType is set while walking one of the four type directories, where the location decides
+     *  the type; anywhere else the payload is identified by its contents. */
+    void scanDirectory(const QDir& dir, std::optional<Type> insideType);
+
+    /** Reads a payload's metadata and notes, and appends an entry for it. */
+    void addScannedFile(const QFileInfo& file, Type type, const QString& relative, CachedPayload& facts);
+
+    /** Writes the notes file for an entry, keeping any description it already had. */
+    [[nodiscard]] bool writeNotes(const Entry& entry, QString* error);
 
     QString m_root;
     QList<Entry> m_entries;
+    QHash<QString, CachedPayload> m_cache;
 };

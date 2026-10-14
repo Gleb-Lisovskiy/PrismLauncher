@@ -37,10 +37,21 @@ class LibraryVersions : public QObject {
         if (!file.open(QIODevice::WriteOnly)) {
             return false;
         }
-        file.write("not a real jar; discovery only cares that a file is there");
+        file.write("not a real jar; the scan only cares that a file is there");
         file.close();
 
-        return lib.load();
+        return lib.rescan();
+    }
+
+    /** Writes the notes file of the one entry in the library, which is where a description and the
+     *  few facts the payload cannot carry are kept. */
+    bool writeNotes(LibraryIndex& lib, const QByteArray& contents)
+    {
+        QFile file(LibraryIndex::notesPathFor(lib.absoluteFilePath(lib.entries().first())));
+        if (!file.open(QIODevice::WriteOnly)) {
+            return false;
+        }
+        return file.write(contents) == contents.size();
     }
 
     /** The single version the provider offers for that library entry. */
@@ -87,12 +98,37 @@ class LibraryVersions : public QObject {
         LibraryIndex lib(libraryDir());
         QVERIFY(makeLibrary(lib));
 
-        auto entry = lib.entries().first();
-        entry.details.mcversion = "1.12.2, 1.16.5";
-        QVERIFY(lib.update(entry));
+        // The versions are declared in the notes file, which is read back by the scan.
+        QVERIFY(writeNotes(lib, "---\nmc-version: 1.12.2, 1.16.5\n---\n"));
+        QVERIFY(lib.rescan());
 
         LibraryAPI api(&lib, LibraryIndex::Type::Mod, "1.20.1");
         QCOMPARE(versionOf(api, lib).mcVersion, (QStringList{ "1.12.2", "1.16.5" }));
+    }
+
+    void testVersionCarriesTheOriginatingProjectWhereThereIsOne()
+    {
+        LibraryIndex lib(libraryDir());
+        QVERIFY(makeLibrary(lib));
+
+        const auto* stored = lib.find(lib.entries().first().id);
+        QVERIFY(stored);
+
+        LibraryAPI api(&lib, LibraryIndex::Type::Mod, "1.20.1");
+
+        // A hand-dropped file has no project, so the entry's own id identifies it, and the version
+        // has no file id. That empty file id is what tells the install step not to invent metadata.
+        auto pack = std::make_shared<ModPlatform::IndexedPack>();
+        pack->addonId = stored->id;
+        ResourceAPI::Callback<QVector<ModPlatform::IndexedVersion>> callbacks{};
+        QVector<ModPlatform::IndexedVersion> captured;
+        callbacks.on_succeed = [&captured](auto& list) { captured = list; };
+        api.getProjectVersions({ pack, {}, {}, ModPlatform::ResourceType::Mod }, std::move(callbacks));
+        QCoreApplication::processEvents();
+
+        QCOMPARE(captured.size(), 1);
+        QCOMPARE(captured.first().addonId.toString(), stored->id);
+        QVERIFY(captured.first().fileId.toString().isEmpty());
     }
 
     void testDownloadUrlIsAPathNotAnUrl()

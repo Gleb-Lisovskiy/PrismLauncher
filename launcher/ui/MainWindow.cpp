@@ -95,7 +95,6 @@
 #include "ui/GuiUtil.h"
 #include "ui/ViewLogWindow.h"
 #include "ui/dialogs/AboutDialog.h"
-#include "ui/dialogs/LibraryDialog.h"
 #include "ui/dialogs/CopyInstanceDialog.h"
 #include "ui/dialogs/CreateShortcutDialog.h"
 #include "ui/dialogs/CustomMessageBox.h"
@@ -1475,28 +1474,6 @@ void MainWindow::newsButtonClicked()
 void MainWindow::onCatChanged(int)
 {
     setCatBackground(APPLICATION->settings()->get("TheCat").toBool());
-}
-
-void MainWindow::on_actionLibrary_triggered()
-{
-    // Deliberately not modal: the Add Files button opens a native file dialog, and on Wayland that
-    // goes through the desktop portal, which refuses to present anything on top of a modal dialog.
-    // A modal library window made the button look completely dead.
-    if (!m_libraryDialog) {
-        m_libraryDialog = new LibraryDialog(this);
-        m_libraryDialog->setAcceptDropsEnabled(true);
-        // Opened from the toolbar there is no obvious target, so this window browses and edits
-        // the library. Installing happens from the instance's own resource pages.
-        m_libraryDialog->setInstallAllowed(false);
-    }
-
-    m_libraryDialog->reload();
-    if (m_selectedInstance) {
-        m_libraryDialog->selectInstance(m_selectedInstance->id());
-    }
-    m_libraryDialog->show();
-    m_libraryDialog->raise();
-    m_libraryDialog->activateWindow();
 }
 
 void MainWindow::on_actionAbout_triggered()

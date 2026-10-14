@@ -37,15 +37,17 @@ class ForkTranslationsCatalog : public QObject {
         // A handful of strings from each part of the fork, to catch a catalog that loads but has
         // empty translations.
         const QVector<QPair<QByteArray, QByteArray>> cases{
-            { "LibraryDialogForm", "Library" },  // the .ui form class, not the dialog
-            { "LibraryModel", "Status" },
             { "LibraryDownloadTask", "Downloading %1" },
-            { "QObject", "No such library entry: %1" },
+            { "LocalResourceCopyTask", "Copying %1" },
+            { "QObject", "The local files folder cannot be read: %1" },
             { "ModFolderPage", "Get mods from your local files folder or from online mod platforms" },
-            { "ResourceDownload::ResourcePage", "Added to Library" },
+            { "ResourcePage", "Save to Local Files" },  // the .ui form, not the page class
+            { "LauncherPage", "&Local Files:" },
+            { "ResourceDownload::ResourcePage", "Added to Local Files" },
             { "ResourceDownload::LocalModPage", "Local Files" },
             { "ResourceDownload::LocalResourcePackPage", "Local Files" },
             { "ResourceDownload::LocalShaderPackPage", "Local Files" },
+            { "ResourceDownload::LocalTexturePackPage", "Local Files" },
         };
 
         for (const auto& [context, source] : cases) {

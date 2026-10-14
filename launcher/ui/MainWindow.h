@@ -59,7 +59,6 @@ class MinecraftLauncher;
 class BaseProfilerFactory;
 class InstanceView;
 class KonamiCode;
-class LibraryDialog;
 class InstanceTask;
 class LabeledToolButton;
 
@@ -94,8 +93,6 @@ class MainWindow : public QMainWindow {
     void onCatChanged(int);
 
     void on_actionAbout_triggered();
-
-    void on_actionLibrary_triggered();
 
     void on_actionAddInstance_triggered();
 
@@ -252,10 +249,6 @@ class MainWindow : public QMainWindow {
 
     BaseInstance* m_selectedInstance = nullptr;
 
-    /** Reused between openings; owned by Qt as a child of this window. Kept alive so that the
-     *  library can be reopened without losing its layout, and so a second copy cannot rewrite the
-     *  manifest at the same time. */
-    LibraryDialog* m_libraryDialog = nullptr;
     QString m_currentInstIcon;
 
     // managed by the application object

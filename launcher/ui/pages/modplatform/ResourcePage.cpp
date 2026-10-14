@@ -573,11 +573,11 @@ void ResourcePage::onAddToLibrary()
     entry.details.mcversion = version.mcVersion.join(", ");
     entry.details.description = pack->description;
     entry.details.homeurl = pack->websiteUrl;
-    entry.projectId = pack->addonId.toString();
-    entry.fileId = version.fileId.toString();
-    entry.provider = pack->provider;
+    entry.origin.provider = pack->provider;
+    entry.origin.projectId = pack->addonId.toString();
+    entry.origin.fileId = version.fileId.toString();
 
-    // LibraryDownloadTask keys the payload by file name; give it one now so the entry gets the same
+    // LibraryIndex::add files the payload by file name; give it one now so the entry gets the same
     // name whether it was added from here or from a file on disk.
     if (!version.fileName.isEmpty()) {
         entry.file = QString("%1/%2").arg(LibraryIndex::typeDirName(entry.type), version.fileName);
@@ -591,9 +591,10 @@ void ResourcePage::onAddToLibrary()
     dialog.setSkipButton(true, tr("Abort"));
     connect(task, &Task::succeeded, this, [this, packName] {
         QMessageBox::information(this,
-                                  tr("Added to Library"),
-                                  tr("'%1' is now in your library. Open it from the Library button in the toolbar to install it into other instances.")
-                                      .arg(packName));
+                                 tr("Added to Local Files"),
+                                 tr("'%1' is now in your local files. It appears under the 'Local Files' tab whenever you "
+                                    "install mods, resource packs or shader packs into an instance.")
+                                     .arg(packName));
     });
     dialog.execWithTask(task);
 }

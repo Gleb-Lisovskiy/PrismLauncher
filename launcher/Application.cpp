@@ -697,6 +697,9 @@ Application::Application(int& argc, char** argv) : QApplication(argc, argv)
         m_settings->registerSetting("MoveModsFromDownloadsDir", false);
         m_settings->registerSetting("SkinsDir", "skins");
         m_settings->registerSetting("JavaDir", "java");
+        // Where the user's own collection of mods and resource packs lives. Relative to the data
+        // root, like the other launcher-managed folders, but an absolute path works just as well.
+        m_settings->registerSetting("LocalFilesDir", "localfiles");
 
 #ifdef Q_OS_MACOS
         // Folder security-scoped bookmarks
@@ -1273,13 +1276,17 @@ bool Application::createSetupWizard()
 
 LibraryIndex* Application::library() const
 {
-    if (!m_library) {
-        m_library = std::make_unique<LibraryIndex>(FS::PathCombine(dataRoot(), "localfiles"));
-        // A malformed manifest must not stop the launcher from starting; the library opens empty
-        // and says why.
+    // The folder is a setting, so it can change while the launcher is running. Rebuilding the index
+    // when it does keeps the two in step; a scan of a folder that has not changed costs a directory
+    // listing and no more.
+    const QString path = FS::PathCombine(dataRoot(), settings()->get("LocalFilesDir").toString());
+    if (!m_library || m_library->rootDir() != path) {
+        m_library = std::make_unique<LibraryIndex>(path);
+        // A folder that cannot be read must not stop the launcher from starting; the library opens
+        // empty and says why.
         QString error;
-        if (!m_library->load(&error)) {
-            qWarning() << "Could not read the library manifest:" << error;
+        if (!m_library->rescan(&error)) {
+            qWarning() << "Could not read the local files folder:" << error;
         }
     }
     return m_library.get();

@@ -1075,12 +1075,8 @@ SET(LAUNCHER_SOURCES
     ui/dialogs/ImportResourceDialog.h
     modplatform/library/LibraryAPI.cpp
     modplatform/library/LibraryAPI.h
-    ui/dialogs/LibraryDialog.cpp
-    ui/dialogs/LibraryDialog.h
-    ui/pages/library/LibraryModel.cpp
     ui/pages/modplatform/library/LocalResourcePage.cpp
     ui/pages/modplatform/library/LocalResourcePage.h
-    ui/pages/library/LibraryModel.h
     ui/dialogs/MSALoginDialog.cpp
     ui/dialogs/MSALoginDialog.h
     ui/dialogs/NetworkJobFailedDialog.cpp
@@ -1279,7 +1275,6 @@ qt_wrap_ui(LAUNCHER_UI
     ui/dialogs/IconPickerDialog.ui
     ui/dialogs/ImportResourceDialog.ui
     ui/dialogs/MSALoginDialog.ui
-    ui/dialogs/LibraryDialog.ui
     ui/dialogs/AboutDialog.ui
     ui/dialogs/ReviewMessageBox.ui
     ui/dialogs/ScrollMessageBox.ui

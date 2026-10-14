@@ -46,7 +46,7 @@ const LibraryIndex::Entry* LibraryAPI::findEntry(const QString& id) const
     }
 
     for (const auto& entry : m_library->entries()) {
-        if (entry.type == m_type && entry.projectId == id) {
+        if (entry.type == m_type && entry.origin.projectId == id) {
             return &entry;
         }
     }
@@ -60,16 +60,19 @@ ModPlatform::IndexedPack::Ptr LibraryAPI::toPack(const LibraryIndex::Entry& entr
     // The installed mod records this as its project_id, and that is what an update check compares
     // against. Using the library entry's own id would make a file that came from CurseForge look
     // like a project the server has never heard of, and no update would ever be offered for it.
-    pack->addonId = entry.projectId.isEmpty() ? entry.id : entry.projectId;
-    // There is no provider to point metadata at; the entry keeps its own source separately, which
-    // is what the install path uses.
-    pack->provider = ModPlatform::ResourceProvider::FLAME;
+    // A file the user dropped into the folder themselves has no project to name, and then the
+    // entry's own id only has to identify a row in the list.
+    pack->addonId = entry.origin.isValid() ? entry.origin.projectId : entry.id;
+    pack->provider = entry.origin.isValid() ? entry.origin.provider : ModPlatform::ResourceProvider::FLAME;
     pack->name = entry.details.name.isEmpty() ? QFileInfo(entry.file).fileName() : entry.details.name;
     // The slug names the packwiz index entry. The mod id is what makes it recognisable; the entry
     // id is the fallback for a file that declares no mod id at all.
     pack->slug = entry.details.mod_id.isEmpty() ? entry.id : entry.details.mod_id;
+    // What the payload itself says. It is what the page falls back to when there are no notes.
     pack->description = entry.details.description;
     pack->websiteUrl = entry.details.homeurl;
+    // The notes are markdown, and the page renders this field as markdown rather than as text.
+    pack->extraData.body = entry.notes;
     pack->versionsLoaded = true;
     // A local file has no long description, gallery or donation links to fetch, so there is nothing
     // for getProjectInfo to look up. Saying so keeps the page from asking, and keeps it from
@@ -84,8 +87,10 @@ ModPlatform::IndexedPack::Ptr LibraryAPI::toPack(const LibraryIndex::Entry& entr
 ModPlatform::IndexedVersion LibraryAPI::toVersion(const LibraryIndex::Entry& entry) const
 {
     ModPlatform::IndexedVersion version;
-    version.addonId = entry.projectId.isEmpty() ? entry.id : entry.projectId;
-    version.fileId = entry.fileId.isEmpty() ? entry.id : entry.fileId;
+    version.addonId = entry.origin.isValid() ? entry.origin.projectId : entry.id;
+    // Empty for a file the user dropped in, which is how the install path tells that there is no
+    // project to write into the instance's metadata.
+    version.fileId = entry.origin.fileId;
     version.version = entry.details.version.isEmpty() ? QFileInfo(entry.file).fileName() : entry.details.version;
     version.version_number = version.version;
     version.fileName = QFileInfo(m_library->absoluteFilePath(entry)).fileName();
@@ -101,7 +106,7 @@ ModPlatform::IndexedVersion LibraryAPI::toVersion(const LibraryIndex::Entry& ent
     version.version_type = ModPlatform::IndexedVersionType::Release;
 
     if (!entry.details.mcversion.isEmpty()) {
-        // The field is free text a human typed into the manifest, so the parts need trimming before
+        // The field is free text a human typed into the notes, so the parts need trimming before
         // they can be compared against the instance's version.
         version.mcVersion = entry.details.mcversion.split(',', Qt::SkipEmptyParts);
         for (auto& mcVersion : version.mcVersion) {
@@ -153,7 +158,7 @@ Task::Ptr LibraryAPI::getProjectVersions(VersionSearchArgs&& args, Callback<QVec
 
     if (m_library && args.pack) {
         if (const auto* entry = findEntry(args.pack->addonId.toString())) {
-            if (entry->type == m_type && !entry->broken) {
+            if (entry->type == m_type) {
                 versions.append(toVersion(*entry));
             }
         }

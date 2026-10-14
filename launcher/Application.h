@@ -122,8 +122,9 @@ class Application : public QApplication {
 
     /** The user's shared library of reusable local resources, created on first use.
      *
-     *  Lives in <data root>/library, next to the other launcher-managed directories. Created
-     *  lazily so that a headless or library-only run does not touch the disk for it. */
+     *  Lives in the folder named by the LocalFilesDir setting, which defaults to a directory next to
+     *  the launcher's other data. Created lazily so that a headless or library-only run does not
+     *  touch the disk for it. */
     LibraryIndex* library() const;
 
     qint64 timeSinceStart() const { return m_startTime.msecsTo(QDateTime::currentDateTime()); }

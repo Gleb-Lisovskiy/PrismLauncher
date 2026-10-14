@@ -8,6 +8,7 @@
 #include "ui/pages/modplatform/ModPage.h"
 #include "ui/pages/modplatform/ResourcePackPage.h"
 #include "ui/pages/modplatform/ShaderPackPage.h"
+#include "ui/pages/modplatform/TexturePackPage.h"
 
 namespace ResourceDownload {
 // The dialogs live in this namespace too; declared here because including
@@ -15,6 +16,7 @@ namespace ResourceDownload {
 class ModDownloadDialog;
 class ResourcePackDownloadDialog;
 class ShaderPackDownloadDialog;
+class TexturePackDownloadDialog;
 
 /** The local files library, shown as a tab in the ordinary resource dialog.
  *
@@ -75,6 +77,29 @@ class LocalShaderPackPage : public ShaderPackResourcePage {
     static LocalShaderPackPage* create(ShaderPackDownloadDialog* dialog, BaseInstance& instance, LibraryIndex* library);
 
     LocalShaderPackPage(ShaderPackDownloadDialog* dialog, BaseInstance& instance, LibraryIndex* library);
+
+    inline auto displayName() const -> QString override { return tr("Local Files"); }
+    inline auto icon() const -> QIcon override { return QIcon::fromTheme("folder"); }
+    inline auto id() const -> QString override { return "local"; }
+    inline auto metaEntryBase() const -> QString override { return "local"; }
+    inline auto debugName() const -> QString override { return "Local files"; }
+    inline auto shouldDisplay() const -> bool override { return true; }
+    inline auto helpPage() const -> QString override { return {}; }
+
+   private:
+    LibraryIndex* m_library = nullptr;
+};
+
+/** Texture packs get their own tab as well, because the toolchain for them is different enough to
+ *  be worth its own folder: a file put into texturepacks/ is a texture pack even though the modern
+ *  format is the same as a resource pack's. */
+class LocalTexturePackPage : public TexturePackResourcePage {
+    Q_OBJECT
+
+   public:
+    static LocalTexturePackPage* create(TexturePackDownloadDialog* dialog, BaseInstance& instance, LibraryIndex* library);
+
+    LocalTexturePackPage(TexturePackDownloadDialog* dialog, BaseInstance& instance, LibraryIndex* library);
 
     inline auto displayName() const -> QString override { return tr("Local Files"); }
     inline auto icon() const -> QIcon override { return QIcon::fromTheme("folder"); }

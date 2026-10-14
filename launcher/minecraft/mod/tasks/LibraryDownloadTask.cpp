@@ -63,10 +63,10 @@ void LibraryDownloadTask::onSucceeded()
         return;
     }
 
-    // The manifest keys the payload by file name, so give the temporary file the name it will have
-    // in the library rather than letting the download invent one.
-    const QString fileName = m_entry.file.isEmpty() ? m_url.fileName()
-                                                     : QFileInfo(m_entry.file).fileName();
+    // The file keeps the name it will have in the library rather than the one the download would
+    // otherwise invent, because that is the name the user recognises and the one the notes file
+    // will be named after.
+    const QString fileName = m_entry.file.isEmpty() ? m_url.fileName() : QFileInfo(m_entry.file).fileName();
     const QString staged = m_tempPath + "." + (fileName.isEmpty() ? QString("download") : fileName);
     if (!QFile::rename(m_tempPath, staged)) {
         emitFailed(tr("Could not stage the downloaded file."));

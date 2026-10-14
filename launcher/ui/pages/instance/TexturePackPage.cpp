@@ -50,7 +50,7 @@ TexturePackPage::TexturePackPage(MinecraftInstance* instance, TexturePackFolderM
     : ExternalResourcesPage(instance, model, parent), m_model(model)
 {
     ui->actionDownloadItem->setText(tr("Download Packs"));
-    ui->actionDownloadItem->setToolTip(tr("Download texture packs from online mod platforms"));
+    ui->actionDownloadItem->setToolTip(tr("Get texture packs from your local files folder or from online mod platforms"));
     ui->actionDownloadItem->setEnabled(true);
     ui->actionsToolbar->insertActionBefore(ui->actionAddItem, ui->actionDownloadItem);
 

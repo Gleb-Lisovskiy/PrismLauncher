@@ -12,6 +12,7 @@
 #include "ui/pages/modplatform/ModModel.h"
 #include "ui/pages/modplatform/ResourcePackModel.h"
 #include "ui/pages/modplatform/ShaderPackModel.h"
+#include "ui/pages/modplatform/TexturePackModel.h"
 #include "ui_ResourcePage.h"
 
 using namespace ResourceDownload;
@@ -118,6 +119,32 @@ LocalShaderPackPage* LocalShaderPackPage::create(ShaderPackDownloadDialog* dialo
 {
     auto page = new LocalShaderPackPage(dialog, instance, library);
     auto* model = static_cast<ShaderPackResourceModel*>(page->getModel());
+
+    connect(model, &ResourceModel::versionListUpdated, page, &ResourcePage::versionListUpdated);
+    connect(model, &ResourceModel::projectInfoUpdated, page, &ResourcePage::updateUi);
+    connect(model, &QAbstractListModel::modelReset, page, &ResourcePage::modelReset);
+    return page;
+}
+
+/* --- Texture packs --- */
+
+LocalTexturePackPage::LocalTexturePackPage(TexturePackDownloadDialog* dialog, BaseInstance& instance, LibraryIndex* library)
+    : TexturePackResourcePage(dialog, instance), m_library(library)
+{
+    connect(m_ui->versionSelectionBox, &QComboBox::currentIndexChanged, this, &LocalTexturePackPage::onVersionSelectionChanged);
+    connect(m_ui->resourceSelectionButton, &QPushButton::clicked, this, &LocalTexturePackPage::onResourceSelected);
+
+    m_model = new TexturePackResourceModel(instance, new LibraryAPI(library, LibraryIndex::Type::TexturePack, gameVersionOf(instance)),
+                                           debugName(), metaEntryBase());
+    m_ui->packView->setModel(m_model);
+
+    connect(m_ui->packView->selectionModel(), &QItemSelectionModel::currentChanged, this, &LocalTexturePackPage::onSelectionChanged);
+}
+
+LocalTexturePackPage* LocalTexturePackPage::create(TexturePackDownloadDialog* dialog, BaseInstance& instance, LibraryIndex* library)
+{
+    auto page = new LocalTexturePackPage(dialog, instance, library);
+    auto* model = static_cast<TexturePackResourceModel*>(page->getModel());
 
     connect(model, &ResourceModel::versionListUpdated, page, &ResourcePage::versionListUpdated);
     connect(model, &ResourceModel::projectInfoUpdated, page, &ResourcePage::updateUi);

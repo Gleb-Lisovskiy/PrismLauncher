@@ -184,6 +184,17 @@ void LauncherPage::on_skinsDirBrowseBtn_clicked()
     }
 }
 
+void LauncherPage::on_localFilesDirBrowseBtn_clicked()
+{
+    QString raw_dir = QFileDialog::getExistingDirectory(this, tr("Local Files Folder"), ui->localFilesDirTextBox->text());
+
+    // do not allow current dir - it's dirty. Do not allow dirs that don't exist
+    if (!raw_dir.isEmpty() && QDir(raw_dir).exists()) {
+        QString cooked_dir = FS::NormalizePath(raw_dir);
+        ui->localFilesDirTextBox->setText(cooked_dir);
+    }
+}
+
 void LauncherPage::on_metadataEnableBtn_clicked()
 {
     ui->metadataWarningLabel->setHidden(ui->metadataEnableBtn->isChecked());
@@ -218,6 +229,7 @@ void LauncherPage::applySettings()
     s->set("DownloadsDir", ui->downloadsDirTextBox->text());
     s->set("SkinsDir", ui->skinsDirTextBox->text());
     s->set("JavaDir", ui->javaDirTextBox->text());
+    s->set("LocalFilesDir", ui->localFilesDirTextBox->text());
     s->set("DownloadsDirWatchRecursive", ui->downloadsDirWatchRecursiveCheckBox->isChecked());
     s->set("MoveModsFromDownloadsDir", ui->downloadsDirMoveCheckBox->isChecked());
 
@@ -274,6 +286,7 @@ void LauncherPage::loadSettings()
     ui->downloadsDirTextBox->setText(s->get("DownloadsDir").toString());
     ui->skinsDirTextBox->setText(s->get("SkinsDir").toString());
     ui->javaDirTextBox->setText(s->get("JavaDir").toString());
+    ui->localFilesDirTextBox->setText(s->get("LocalFilesDir").toString());
     ui->downloadsDirWatchRecursiveCheckBox->setChecked(s->get("DownloadsDirWatchRecursive").toBool());
     ui->downloadsDirMoveCheckBox->setChecked(s->get("MoveModsFromDownloadsDir").toBool());
 

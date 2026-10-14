@@ -2,6 +2,8 @@
 //
 // SPDX-License-Identifier: GPL-3.0-only
 
+#include <QJsonDocument>
+#include <QJsonObject>
 #include <QTemporaryDir>
 #include <QTest>
 
@@ -9,36 +11,72 @@
 #include "archive/ArchiveWriter.h"
 #include "minecraft/mod/LibraryIndex.h"
 
+/* The library has no manifest to keep in step: the directory is the list. That makes the scan the
+ * only thing standing between what the user put on disk and what the dialog shows, so most of what
+ * is worth testing is what a scan makes of a folder in various states. */
 class LibraryIndexTest : public QObject {
     Q_OBJECT
 
    private:
     QTemporaryDir m_dir;
 
-    /** A private directory per test method.
-     *
-     *  m_dir is shared by every test in the class, and load() now discovers files that were placed
-     *  in the type directories without going through add(). Without a per-test root, leftovers
-     *  from an earlier test would show up in the next one's counts. */
+    /** A private directory per test method, so a later test cannot see an earlier one's files. */
     QString uniqueDir() const { return FS::PathCombine(m_dir.path(), QTest::currentTestFunction()); }
 
     QString libraryDir() const { return FS::PathCombine(uniqueDir(), "localfiles"); }
 
+    static bool writeFile(const QString& path, const QByteArray& contents)
+    {
+        QDir().mkpath(QFileInfo(path).absolutePath());
+        QFile file(path);
+        if (!file.open(QIODevice::WriteOnly)) {
+            return false;
+        }
+        return file.write(contents) == contents.size();
+    }
+
     QString writeSource(const QString& name, const QByteArray& contents)
     {
-        QDir().mkpath(uniqueDir());
         const QString path = FS::PathCombine(uniqueDir(), "src-" + name);
+        return writeFile(path, contents) ? path : QString();
+    }
+
+    static QByteArray readAll(const QString& path)
+    {
         QFile file(path);
-        if (file.open(QIODevice::WriteOnly)) {
-            file.write(contents);
+        if (!file.open(QIODevice::ReadOnly)) {
+            return {};
+        }
+        return file.readAll();
+    }
+
+    /** Copies a file the helpers wrote into the library, which is how a hand-placed payload gets
+     *  there. */
+    static bool place(const QString& source, const QString& destination) { return writeFile(destination, readAll(source)); }
+
+    /** Writes a zip holding the given files, which is enough of a jar for the identification code
+     *  to recognise. Returns an empty string on failure. */
+    QString writeZip(const QString& fileName, const QList<QPair<QString, QByteArray>>& contents)
+    {
+        const QString path = FS::PathCombine(uniqueDir(), fileName);
+        QDir().mkpath(uniqueDir());
+
+        MMCZip::ArchiveWriter writer(path);
+        if (!writer.open()) {
+            return {};
+        }
+        for (const auto& [name, data] : contents) {
+            if (!writer.addFile(name, data)) {
+                return {};
+            }
+        }
+        if (!writer.close()) {
+            return {};
         }
         return path;
     }
 
-    /** Writes a minimal Fabric mod jar, which is as close to a real one as a test needs.
-     *
-     *  Returns an empty string on failure. The metadata lives in fabric.mod.json, exactly where a
-     *  real loader would look for it. */
+    /** A minimal Fabric mod jar, which is as close to a real one as a test needs. */
     QString writeFabricMod(const QString& fileName, const QString& modId, const QString& version, const QString& name)
     {
         QJsonObject object;
@@ -48,20 +86,7 @@ class LibraryIndexTest : public QObject {
         object.insert("name", name);
         object.insert("description", "a mod that describes itself");
         const auto json = QJsonDocument(object).toJson(QJsonDocument::Indented);
-
-        const QString path = FS::PathCombine(uniqueDir(), fileName);
-        QDir().mkpath(uniqueDir());
-        MMCZip::ArchiveWriter writer(path);
-        if (!writer.open()) {
-            return {};
-        }
-        if (!writer.addFile("fabric.mod.json", json)) {
-            return {};
-        }
-        if (!writer.close()) {
-            return {};
-        }
-        return path;
+        return writeZip(fileName, { { "fabric.mod.json", json } });
     }
 
     static LibraryIndex::Entry makeEntry(const QString& modId,
@@ -75,26 +100,38 @@ class LibraryIndexTest : public QObject {
         entry.details.name = name;
         entry.details.version = version;
         entry.details.description = "a test mod";
-        entry.projectId = "123";
-        entry.fileId = "456";
         return entry;
+    }
+
+    /** The path a file dropped by hand has once scanned. */
+    static QString typePath(const LibraryIndex& lib, LibraryIndex::Type type, const QString& fileName)
+    {
+        return FS::PathCombine(FS::PathCombine(lib.rootDir(), LibraryIndex::typeDirName(type)), fileName);
     }
 
    private slots:
     void testEmptyLibraryIsNotAnError()
     {
         LibraryIndex lib(libraryDir());
-        QVERIFY(lib.load());
+        QVERIFY(lib.rescan());
         QVERIFY(lib.empty());
         QCOMPARE(lib.size(), 0);
     }
 
-    void testAddStoresPayloadAndManifest()
+    void testAddStoresPayloadAndNotes()
     {
         LibraryIndex lib(libraryDir());
-        const QString src = writeSource("thing.jar", "payload-one");
+        // A real jar, because the identity of a mod comes out of its metadata and has to survive
+        // the next scan: a scan reads the file, it does not remember what add() was told.
+        const QString src = writeFabricMod("sodium-0.5.8.jar", "sodium", "0.5.8", "Sodium");
+        QVERIFY(!src.isEmpty());
 
-        auto entry = makeEntry("thing", "Thing");
+        LibraryIndex::Entry entry;
+        entry.type = LibraryIndex::Type::Mod;
+        entry.origin.provider = ModPlatform::ResourceProvider::MODRINTH;
+        entry.origin.projectId = "AANobbMI";
+        entry.origin.fileId = "abc123";
+
         QString error;
         QVERIFY2(lib.add(entry, src, &error), qPrintable(error));
         QCOMPARE(lib.size(), 1);
@@ -106,12 +143,30 @@ class LibraryIndexTest : public QObject {
 
         const auto* stored = lib.find(entry.id);
         QVERIFY(stored);
-        QCOMPARE(stored->details.mod_id, QString("thing"));
-        QCOMPARE(stored->details.name, QString("Thing"));
-        QCOMPARE(stored->details.description, QString("a test mod"));
-        QCOMPARE(stored->projectId, QString("123"));
+        QCOMPARE(stored->details.mod_id, QString("sodium"));
+        QCOMPARE(stored->origin.projectId, QString("AANobbMI"));
         QVERIFY(QFileInfo::exists(lib.absoluteFilePath(*stored)));
-        QVERIFY(!stored->broken);
+
+        // Where it came from is written next to the payload, so it survives a restart without a
+        // manifest to hold it.
+        QVERIFY(QFileInfo::exists(LibraryIndex::notesPathFor(lib.absoluteFilePath(*stored))));
+
+        LibraryIndex reopened(lib.rootDir());
+        QVERIFY(reopened.rescan());
+        QCOMPARE(reopened.size(), 1);
+        const auto& reread = reopened.entries().first();
+        QVERIFY(reread.origin.isValid());
+        QCOMPARE(reread.origin.provider, ModPlatform::ResourceProvider::MODRINTH);
+        QCOMPARE(reread.origin.projectId, QString("AANobbMI"));
+        QCOMPARE(reread.origin.fileId, QString("abc123"));
+        QCOMPARE(reread.details.mod_id, QString("sodium"));
+        QCOMPARE(reread.details.version, QString("0.5.8"));
+        QCOMPARE(reread.id, entry.id);  // The identity a caller was handed still finds the entry.
+    }
+
+    void testNotesPathIsNextToThePayload()
+    {
+        QCOMPARE(LibraryIndex::notesPathFor("/library/mods/sodium.jar"), QString("/library/mods/sodium.jar.md"));
     }
 
     void testSameModDifferentVersionsCoexist()
@@ -135,30 +190,21 @@ class LibraryIndexTest : public QObject {
         QCOMPARE(v1again.id, v1.id);
     }
 
-    void testRoundTrip()
+    void testReAddingUnderTheSameFileNameReusesThePath()
     {
-        const QString root = libraryDir();
-        const QString src = writeSource("thing.jar", "payload-one");
-
+        LibraryIndex lib(libraryDir());
         QString error;
-        {
-            LibraryIndex lib(root);
-            auto entry = makeEntry("thing", "Thing");
-            QVERIFY2(lib.add(entry, src, &error), qPrintable(error));
-        }
 
-        LibraryIndex reopened(root);
-        QVERIFY(reopened.load());
-        QCOMPARE(reopened.size(), 1);
+        auto first = makeEntry("thing", "Thing");
+        QVERIFY2(lib.add(first, writeSource("thing.jar", "version-one"), &error), qPrintable(error));
 
-        const auto* entry = reopened.find(LibraryIndex::makeId(LibraryIndex::Type::Mod, makeEntry("thing", "Thing").details, "thing.jar"));
-        QVERIFY(entry);
-        QCOMPARE(entry->details.mod_id, QString("thing"));
-        QCOMPARE(entry->details.version, QString("1.0.0"));
-        QCOMPARE(entry->projectId, QString("123"));
-        QCOMPARE(entry->fileId, QString("456"));
-        QVERIFY(entry->addedAt.isValid());
-        QVERIFY(!entry->broken);
+        auto second = makeEntry("thing", "Thing");
+        QVERIFY2(lib.add(second, writeSource("thing.jar", "version-two"), &error), qPrintable(error));
+
+        QCOMPARE(lib.size(), 1);
+        // Same file name means the payload is replaced in place, so there is no orphan to clean up.
+        QCOMPARE(second.file, first.file);
+        QVERIFY(QFileInfo::exists(lib.absoluteFilePath(lib.entries().first())));
     }
 
     void testReAddingSameVersionWithNewFileNameDropsOldPayload()
@@ -177,23 +223,11 @@ class LibraryIndexTest : public QObject {
         QVERIFY(second.file != firstFile);
         QVERIFY(!QFileInfo::exists(FS::PathCombine(lib.rootDir(), firstFile)));  // Orphaned payload removed.
         QVERIFY(QFileInfo::exists(lib.absoluteFilePath(lib.entries().first())));
-    }
 
-    void testReAddingUnderTheSameFileNameReusesThePath()
-    {
-        LibraryIndex lib(libraryDir());
-        QString error;
-
-        auto first = makeEntry("thing", "Thing");
-        QVERIFY2(lib.add(first, writeSource("thing.jar", "version-one"), &error), qPrintable(error));
-
-        auto second = makeEntry("thing", "Thing");
-        QVERIFY2(lib.add(second, writeSource("thing.jar", "version-two"), &error), qPrintable(error));
-
-        QCOMPARE(lib.size(), 1);
-        // Same file name means the payload is replaced in place, so there is no orphan to clean up.
-        QCOMPARE(second.file, first.file);
-        QVERIFY(QFileInfo::exists(lib.absoluteFilePath(lib.entries().first())));
+        // And the folder is clean enough that a scan does not find the old copy again.
+        LibraryIndex reopened(lib.rootDir());
+        QVERIFY(reopened.rescan());
+        QCOMPARE(reopened.size(), 1);
     }
 
     void testIdsDistinguishTypeModAndVersion()
@@ -231,157 +265,153 @@ class LibraryIndexTest : public QObject {
         QCOMPARE(entry.id, LibraryIndex::makeId(LibraryIndex::Type::Mod, entry.details, QFileInfo(src).fileName()));
     }
 
-    void testRemoveDropsPayloadAndManifest()
-    {
-        LibraryIndex lib(libraryDir());
-        QString error;
-        auto entry = makeEntry("thing", "Thing");
-        QVERIFY2(lib.add(entry, writeSource("thing.jar", "payload"), &error), qPrintable(error));
-
-        const auto id = lib.entries().first().id;
-        const QString file = lib.entries().first().file;
-        QVERIFY2(lib.remove(id, &error), qPrintable(error));
-
-        QVERIFY(lib.empty());
-        QVERIFY(!QFileInfo::exists(FS::PathCombine(lib.rootDir(), file)));
-
-        LibraryIndex reopened(lib.rootDir());
-        QVERIFY(reopened.load());
-        QVERIFY(reopened.empty());
-    }
-
-    void testMissingPayloadIsFlaggedNotDropped()
-    {
-        const QString root = libraryDir();
-        QString error;
-        {
-            LibraryIndex lib(root);
-            auto entry = makeEntry("thing", "Thing");
-            QVERIFY2(lib.add(entry, writeSource("thing.jar", "payload"), &error), qPrintable(error));
-        }
-
-        LibraryIndex probe(root);
-        QVERIFY(probe.load());
-        QVERIFY(QFile::remove(probe.absoluteFilePath(probe.entries().first())));
-
-        LibraryIndex reopened(root);
-        QVERIFY(reopened.load());
-        QCOMPARE(reopened.size(), 1);  // Kept, so the user can see what is broken and re-add it.
-        QVERIFY(reopened.entries().first().broken);
-    }
-
     void testFilesDroppedIntoTheFolderArePickedUp()
     {
         const QString root = libraryDir();
 
-        // Simulate a user copying a jar into the folder by hand instead of using the dialog.
-        QVERIFY(QDir(FS::PathCombine(root, "mods")).mkpath("."));
-        QVERIFY(QDir(FS::PathCombine(root, "shaderpacks")).mkpath("."));
-        for (const auto& [dirName, fileName] : { std::pair{ "mods", "handmade.jar" }, std::pair{ "shaderpacks", "glow.zip" } }) {
-            QFile file(FS::PathCombine(FS::PathCombine(root, dirName), fileName));
-            QVERIFY(file.open(QIODevice::WriteOnly));
-            file.write("data");
-        }
+        // Simulate a user copying files into the folder by hand instead of using the dialog.
+        QVERIFY(writeFile(FS::PathCombine(root, "mods/handmade.jar"), "data"));
+        QVERIFY(writeFile(FS::PathCombine(root, "shaderpacks/glow.zip"), "data"));
 
         LibraryIndex lib(root);
-        QVERIFY(lib.load());
+        QVERIFY(lib.rescan());
         QCOMPARE(lib.size(), 2);
 
         const auto* mod = lib.find(LibraryIndex::makeId(LibraryIndex::Type::Mod, ModDetails(), "handmade.jar"));
         QVERIFY(mod);
         QCOMPARE(mod->file, QString("mods/handmade.jar"));
         QCOMPARE(mod->details.name, QString("handmade"));
-        QVERIFY(!mod->broken);
 
         const auto* shader = lib.find(LibraryIndex::makeId(LibraryIndex::Type::ShaderPack, ModDetails(), "glow.zip"));
         QVERIFY(shader);
         QCOMPARE(shader->type, LibraryIndex::Type::ShaderPack);
 
-        // And the discovery is written back, so it does not happen again on every load.
-        LibraryIndex reopened(root);
-        QVERIFY(reopened.load());
-        QCOMPARE(reopened.size(), 2);
-        QVERIFY(QFileInfo::exists(reopened.manifestPath()));
+        // Nothing is written back: there is no manifest to write.
+        QVERIFY(!QFileInfo::exists(FS::PathCombine(root, "localfiles.json")));
     }
 
-    void testDiscoveryDoesNotDuplicateOrResurrectRemovedEntries()
+    void testDeletingAPayloadRemovesItFromTheNextScan()
     {
         LibraryIndex lib(libraryDir());
-        QString error;
-        auto entry = makeEntry("thing", "Thing");
-        QVERIFY2(lib.add(entry, writeSource("thing.jar", "payload"), &error), qPrintable(error));
+        QVERIFY(writeFile(typePath(lib, LibraryIndex::Type::Mod, "handmade.jar"), "data"));
+        QVERIFY(lib.rescan());
+        QCOMPARE(lib.size(), 1);
 
-        const QString id = lib.find(LibraryIndex::makeId(LibraryIndex::Type::Mod, entry.details, "thing.jar"))->id;
-        QVERIFY2(lib.remove(id, &error), qPrintable(error));
+        QVERIFY(QFile::remove(lib.absoluteFilePath(lib.entries().first())));
 
-        // remove() deletes the payload too, so a reload must not resurrect it.
         LibraryIndex reopened(lib.rootDir());
-        QVERIFY(reopened.load());
+        QVERIFY(reopened.rescan());
         QVERIFY(reopened.empty());
     }
 
-    void testEntriesWithUnsafePathsAreRejectedAsBroken()
+    void testPayloadOutsideTypeDirectoriesIsIdentifiedByContents()
     {
-        const QString root = libraryDir();
-        QVERIFY(QDir(root).mkpath("."));
-        QFile manifest(FS::PathCombine(root, "localfiles.json"));
-        QVERIFY(manifest.open(QIODevice::WriteOnly));
-        manifest.write(R"({
-            "version": 1,
-            "entries": [
-                { "id": "escape", "type": "mods", "file": "../../etc/passwd", "modId": "escape" },
-                { "id": "absolute", "type": "mods", "file": "/etc/passwd", "modId": "absolute" },
-                { "id": "outside", "type": "mods", "file": "elsewhere/x.jar", "modId": "outside" },
-                { "id": "fine", "type": "mods", "file": "mods/x.jar", "modId": "fine" }
-            ]
-        })");
-        manifest.close();
+        LibraryIndex lib(libraryDir());
 
-        LibraryIndex lib(root);
-        QVERIFY(lib.load());
-        QCOMPARE(lib.size(), 4);
-        QVERIFY(lib.find("escape")->broken);
-        QVERIFY(lib.find("absolute")->broken);
-        QVERIFY(lib.find("outside")->broken);  // Not a known type directory, so not trusted.
+        // A jar in a directory that is not one of the four: what it is has to come from opening it.
+        const QString jar = writeFabricMod("build-42.jar", "examplemod", "4.2.0", "Example Mod");
+        QVERIFY(!jar.isEmpty());
+        QVERIFY(place(jar, FS::PathCombine(lib.rootDir(), "inbox/build-42.jar")));
+
+        QVERIFY(lib.rescan());
+        QCOMPARE(lib.size(), 1);
+
+        const auto& entry = lib.entries().first();
+        QCOMPARE(entry.type, LibraryIndex::Type::Mod);
+        QCOMPARE(entry.file, QString("inbox/build-42.jar"));
+        QCOMPARE(entry.details.mod_id, QString("examplemod"));
     }
 
-    void testMalformedManifestFailsWithoutLosingEntries()
+    void testFileThatIsNothingUsableIsIgnored()
     {
-        const QString root = libraryDir();
-        QVERIFY(QDir(root).mkpath("."));
-        QFile manifest(FS::PathCombine(root, "localfiles.json"));
-        QVERIFY(manifest.open(QIODevice::WriteOnly));
-        manifest.write("{ this is not json");
-        manifest.close();
+        LibraryIndex lib(libraryDir());
+        QVERIFY(writeFile(FS::PathCombine(lib.rootDir(), "readme.txt"), "just some notes"));
 
-        LibraryIndex lib(root);
-        QString error;
-        QVERIFY(!lib.load(&error));
-        QVERIFY(!error.isEmpty());
+        QVERIFY(lib.rescan());
         QVERIFY(lib.empty());
     }
 
-    void testIncompleteEntriesAreSkipped()
+    void testPlacedTypeDirectoryWinsOverContents()
     {
-        const QString root = libraryDir();
-        QVERIFY(QDir(root).mkpath("."));
-        QFile manifest(FS::PathCombine(root, "localfiles.json"));
-        QVERIFY(manifest.open(QIODevice::WriteOnly));
-        manifest.write(R"({
-            "version": 1,
-            "entries": [
-                { "type": "mods", "file": "mods/a.jar" },
-                { "id": "no-file", "type": "mods" },
-                { "id": "ok", "type": "shaderpacks", "file": "shaderpacks/b.zip", "modId": "ok" }
-            ]
-        })");
-        manifest.close();
+        LibraryIndex lib(libraryDir());
 
-        LibraryIndex lib(root);
-        QVERIFY(lib.load());
+        // A mod jar put into resourcepacks/ is taken at its word: the placement was deliberate.
+        const QString jar = writeFabricMod("thing.jar", "examplemod", "4.2.0", "Example Mod");
+        QVERIFY(!jar.isEmpty());
+        QVERIFY(place(jar, typePath(lib, LibraryIndex::Type::ResourcePack, "thing.jar")));
+
+        QVERIFY(lib.rescan());
         QCOMPARE(lib.size(), 1);
-        QCOMPARE(lib.entries().first().id, QString("ok"));
-        QCOMPARE(lib.entries().first().type, LibraryIndex::Type::ShaderPack);
+        QCOMPARE(lib.entries().first().type, LibraryIndex::Type::ResourcePack);
+        QCOMPARE(lib.entries().first().file, QString("resourcepacks/thing.jar"));
+    }
+
+    void testNotesWithFrontMatterDescribeTheEntry()
+    {
+        LibraryIndex lib(libraryDir());
+        const QString payload = typePath(lib, LibraryIndex::Type::Mod, "sodium.jar");
+        QVERIFY(writeFile(payload, "payload"));
+        QVERIFY(writeFile(LibraryIndex::notesPathFor(payload),
+                          "---\n"
+                          "provider: modrinth\n"
+                          "project-id: AANobbMI\n"
+                          "file-id: abc123\n"
+                          "mc-version: 1.20.1, 1.20.2\n"
+                          "---\n"
+                          "# Sodium\n"
+                          "A rendering mod.\n"));
+
+        LibraryIndex reopened(lib.rootDir());
+        QVERIFY(reopened.rescan());
+        QCOMPARE(reopened.size(), 1);
+
+        const auto& entry = reopened.entries().first();
+        QVERIFY(entry.origin.isValid());
+        QCOMPARE(entry.origin.provider, ModPlatform::ResourceProvider::MODRINTH);
+        QCOMPARE(entry.origin.projectId, QString("AANobbMI"));
+        QCOMPARE(entry.origin.fileId, QString("abc123"));
+        QCOMPARE(entry.details.mcversion, QString("1.20.1, 1.20.2"));
+        QCOMPARE(entry.notes, QString("# Sodium\nA rendering mod."));
+    }
+
+    void testNotesWithoutFrontMatterIsAllDescription()
+    {
+        LibraryIndex lib(libraryDir());
+        const QString payload = typePath(lib, LibraryIndex::Type::Mod, "sodium.jar");
+        QVERIFY(writeFile(payload, "payload"));
+        QVERIFY(writeFile(LibraryIndex::notesPathFor(payload), "Just a description.\nSecond line.\n"));
+
+        LibraryIndex reopened(lib.rootDir());
+        QVERIFY(reopened.rescan());
+        QCOMPARE(reopened.size(), 1);
+
+        const auto& entry = reopened.entries().first();
+        QVERIFY(!entry.origin.isValid());
+        QCOMPARE(entry.notes, QString("Just a description.\nSecond line."));
+    }
+
+    void testNotesCanOverrideNameAndVersion()
+    {
+        LibraryIndex lib(libraryDir());
+        const QString payload = typePath(lib, LibraryIndex::Type::Mod, "sodium.jar");
+        QVERIFY(writeFile(payload, "payload"));
+        QVERIFY(writeFile(LibraryIndex::notesPathFor(payload), "---\nname: Sodium\nversion: 0.5.8\n---\n"));
+
+        LibraryIndex reopened(lib.rootDir());
+        QVERIFY(reopened.rescan());
+        QCOMPARE(reopened.size(), 1);
+        QCOMPARE(reopened.entries().first().details.name, QString("Sodium"));
+        QCOMPARE(reopened.entries().first().details.version, QString("0.5.8"));
+    }
+
+    void testNotesFileIsNotItselfAPayload()
+    {
+        LibraryIndex lib(libraryDir());
+        QVERIFY(writeFile(typePath(lib, LibraryIndex::Type::Mod, "sodium.jar"), "payload"));
+        QVERIFY(writeFile(typePath(lib, LibraryIndex::Type::Mod, "sodium.jar.md"), "notes"));
+
+        QVERIFY(lib.rescan());
+        QCOMPARE(lib.size(), 1);  // The .md is notes, not a second entry.
     }
 
     void testAllTypesRoundTrip()
@@ -394,25 +424,30 @@ class LibraryIndexTest : public QObject {
             { LibraryIndex::Type::TexturePack, "texturepacks" },
         };
 
+        // Entries with no metadata of their own, which is what a pack dropped in by hand looks
+        // like: the identity then comes from the file name, which the scan sees unchanged.
         {
             LibraryIndex lib(root);
             QString error;
             for (const auto& [type, dirName] : cases) {
-                auto entry = makeEntry("x-" + dirName, "X", type);
-                QVERIFY2(lib.add(entry, writeSource(dirName + ".zip", "data"), &error), qPrintable(error));
+                LibraryIndex::Entry entry;
+                entry.type = type;
+                const QString src = FS::PathCombine(uniqueDir(), dirName + ".zip");
+                QVERIFY(writeFile(src, "data"));
+                QVERIFY2(lib.add(entry, src, &error), qPrintable(error));
                 QVERIFY2(entry.file.startsWith(dirName + "/"), qPrintable(entry.file));
             }
             QCOMPARE(lib.size(), 4);
         }
 
         LibraryIndex reopened(root);
-        QVERIFY(reopened.load());
+        QVERIFY(reopened.rescan());
         QCOMPARE(reopened.size(), 4);
         for (const auto& [type, dirName] : cases) {
-            const auto details = makeEntry("x-" + dirName, "X", type).details;
-            const auto* entry = reopened.find(LibraryIndex::makeId(type, details, dirName + ".zip"));
+            const auto* entry = reopened.find(LibraryIndex::makeId(type, ModDetails(), dirName + ".zip"));
             QVERIFY(entry);
             QCOMPARE(entry->type, type);
+            QCOMPARE(entry->file, dirName + "/" + dirName + ".zip");
         }
     }
 
@@ -421,19 +456,14 @@ class LibraryIndexTest : public QObject {
         // A jar dropped straight into the library has no manifest entry, so everything the entry
         // says about the mod has to come out of the file.
         LibraryIndex lib(libraryDir());
-        QVERIFY(lib.load());
-
-        const QString modsDir = FS::PathCombine(lib.rootDir(), LibraryIndex::typeDirName(LibraryIndex::Type::Mod));
-        QVERIFY(QDir().mkpath(modsDir));
         const QString jar = writeFabricMod("some-random-build-1.jar", "examplemod", "4.2.0", "Example Mod");
         QVERIFY(!jar.isEmpty());
-        QVERIFY(QFile::copy(jar, FS::PathCombine(modsDir, "some-random-build-1.jar")));
+        QVERIFY(place(jar, typePath(lib, LibraryIndex::Type::Mod, "some-random-build-1.jar")));
 
-        LibraryIndex reopened(lib.rootDir());
-        QVERIFY(reopened.load());
-        QCOMPARE(reopened.size(), 1);
+        QVERIFY(lib.rescan());
+        QCOMPARE(lib.size(), 1);
 
-        const auto& entry = reopened.entries().first();
+        const auto& entry = lib.entries().first();
         QCOMPARE(entry.details.mod_id, QString("examplemod"));
         QCOMPARE(entry.details.version, QString("4.2.0"));
         QCOMPARE(entry.details.name, QString("Example Mod"));
@@ -446,21 +476,13 @@ class LibraryIndexTest : public QObject {
     void testUnreadableModKeepsTheFileNameAsItsName()
     {
         LibraryIndex lib(libraryDir());
-        QVERIFY(lib.load());
-
-        const QString modsDir = FS::PathCombine(lib.rootDir(), LibraryIndex::typeDirName(LibraryIndex::Type::Mod));
-        QVERIFY(QDir().mkpath(modsDir));
         // Not a zip at all, so there is nothing to read metadata from.
-        QFile junk(FS::PathCombine(modsDir, "broken-mod.jar"));
-        QVERIFY(junk.open(QIODevice::WriteOnly));
-        junk.write("this is not a jar");
-        junk.close();
+        QVERIFY(writeFile(typePath(lib, LibraryIndex::Type::Mod, "broken-mod.jar"), "this is not a jar"));
 
-        LibraryIndex reopened(lib.rootDir());
-        QVERIFY(reopened.load());
-        QCOMPARE(reopened.size(), 1);
-        QCOMPARE(reopened.entries().first().details.name, QString("broken-mod"));
-        QVERIFY(reopened.entries().first().details.mod_id.isEmpty());
+        QVERIFY(lib.rescan());
+        QCOMPARE(lib.size(), 1);
+        QCOMPARE(lib.entries().first().details.name, QString("broken-mod"));
+        QVERIFY(lib.entries().first().details.mod_id.isEmpty());
     }
 
     void testAddReadsModMetadataWhenTheCallerSuppliesNone()
@@ -495,39 +517,41 @@ class LibraryIndexTest : public QObject {
         QCOMPARE(entry.details.version, QString("9.9.9"));
     }
 
-    void testReadsMetadataForEntriesAnOlderManifestDescribedPoorly()
+    void testAddKeepsTheDescriptionAlreadyInTheNotes()
     {
         LibraryIndex lib(libraryDir());
-        QString error;
-
-        // An entry with nothing but a file name, which is what an older manifest held.
-        auto entry = makeEntry("", "examplemod-4.2.0.jar", LibraryIndex::Type::Mod, "");
         const QString src = writeFabricMod("examplemod-4.2.0.jar", "examplemod", "4.2.0", "Example Mod");
         QVERIFY(!src.isEmpty());
-        QVERIFY2(lib.add(entry, src, &error), qPrintable(error));
 
-        // Reopen, having meanwhile emptied the description the way the old code left it.
-        auto stale = lib.entries().first();
-        stale.details = ModDetails();
-        stale.details.name = "examplemod-4.2.0";
-        {
-            LibraryIndex rewrite(lib.rootDir());
-            QVERIFY(rewrite.load());
-            stale.id = rewrite.entries().first().id;
-            QVERIFY2(rewrite.update(stale, &error), qPrintable(error));
-        }
+        auto entry = makeEntry("examplemod", "Example Mod");
+        QVERIFY(lib.add(entry, src));
+        QVERIFY(writeFile(LibraryIndex::notesPathFor(lib.absoluteFilePath(entry)), "# My own notes\n"));
+
+        // Re-adding the same version writes the front matter again but must not eat the body.
+        auto again = makeEntry("examplemod", "Example Mod");
+        QVERIFY(lib.add(again, src));
 
         LibraryIndex reopened(lib.rootDir());
-        QVERIFY(reopened.load());
+        QVERIFY(reopened.rescan());
         QCOMPARE(reopened.size(), 1);
-        QCOMPARE(reopened.entries().first().details.mod_id, QString("examplemod"));
-        QCOMPARE(reopened.entries().first().details.version, QString("4.2.0"));
-        QCOMPARE(reopened.entries().first().details.name, QString("Example Mod"));
+        QCOMPARE(reopened.entries().first().notes, QString("# My own notes"));
+    }
 
-        // And the repaired description is written back, so it is only read from the jar once.
-        LibraryIndex again(lib.rootDir());
-        QVERIFY(again.load());
-        QCOMPARE(again.entries().first().details.mod_id, QString("examplemod"));
+    void testClashingSameModAndVersionKeepsOneEntry()
+    {
+        LibraryIndex lib(libraryDir());
+        // Two files that both say they are version 4.2.0 of examplemod. A folder people copy into by
+        // hand ends up like this, and the scan has to pick one rather than list both.
+        const QString first = writeFabricMod("examplemod-4.2.0.jar", "examplemod", "4.2.0", "Example Mod");
+        const QString second = writeFabricMod("examplemod-4.2.0-other.jar", "examplemod", "4.2.0", "Example Mod");
+        QVERIFY(!first.isEmpty() && !second.isEmpty());
+
+        QVERIFY(place(first, typePath(lib, LibraryIndex::Type::Mod, "examplemod-4.2.0.jar")));
+        QVERIFY(place(second, typePath(lib, LibraryIndex::Type::Mod, "examplemod-4.2.0-other.jar")));
+
+        QVERIFY(lib.rescan());
+        QCOMPARE(lib.size(), 1);
+        QCOMPARE(lib.entries().first().details.mod_id, QString("examplemod"));
     }
 
     void testAddRejectsMissingSource()
@@ -538,6 +562,55 @@ class LibraryIndexTest : public QObject {
         QVERIFY(!lib.add(ghost, FS::PathCombine(m_dir.path(), "nope.jar"), &error));
         QVERIFY(!error.isEmpty());
         QVERIFY(lib.empty());
+    }
+
+    void testAddRejectsUnusableFileName()
+    {
+        LibraryIndex lib(libraryDir());
+        QString error;
+
+        // A name that is nothing but characters the filesystem rejects still has to land somewhere
+        // rather than fail; the entry keeps a usable identity and the payload is written.
+        auto entry = makeEntry("thing", "Thing");
+        QVERIFY2(lib.add(entry, writeSource("thing.jar", "payload"), &error), qPrintable(error));
+        QVERIFY(!entry.file.isEmpty());
+        QVERIFY(QFileInfo::exists(lib.absoluteFilePath(entry)));
+    }
+
+    void testRescanUsesTheCacheWithoutLosingChanges()
+    {
+        LibraryIndex lib(libraryDir());
+        const QString payload = typePath(lib, LibraryIndex::Type::Mod, "examplemod.jar");
+        const QString jar = writeFabricMod("examplemod.jar", "examplemod", "4.2.0", "Example Mod");
+        QVERIFY(!jar.isEmpty());
+        QVERIFY(place(jar, payload));
+
+        QVERIFY(lib.rescan());
+        QCOMPARE(lib.size(), 1);
+        QCOMPARE(lib.entries().first().details.name, QString("Example Mod"));
+
+        // A second scan must find the same thing ...
+        QVERIFY(lib.rescan());
+        QCOMPARE(lib.size(), 1);
+        QCOMPARE(lib.entries().first().details.name, QString("Example Mod"));
+
+        // ... and a changed file must be read again rather than served from the cache.
+        const QString replaced = writeFabricMod("other.jar", "examplemod", "5.0.0", "Example Mod Renamed");
+        QVERIFY(!replaced.isEmpty());
+        QVERIFY(place(replaced, payload));
+
+        QVERIFY(lib.rescan());
+        QCOMPARE(lib.size(), 1);
+        QCOMPARE(lib.entries().first().details.version, QString("5.0.0"));
+        QCOMPARE(lib.entries().first().details.name, QString("Example Mod Renamed"));
+    }
+
+    void testTypeDirNamesAreDocumented()
+    {
+        QCOMPARE(LibraryIndex::typeDirName(LibraryIndex::Type::Mod), QString("mods"));
+        QCOMPARE(LibraryIndex::typeDirName(LibraryIndex::Type::ResourcePack), QString("resourcepacks"));
+        QCOMPARE(LibraryIndex::typeDirName(LibraryIndex::Type::ShaderPack), QString("shaderpacks"));
+        QCOMPARE(LibraryIndex::typeDirName(LibraryIndex::Type::TexturePack), QString("texturepacks"));
     }
 };
 
