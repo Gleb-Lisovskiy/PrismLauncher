@@ -36,6 +36,8 @@
 
 #include "TranslationsModel.h"
 
+#include "ForkTranslations.h"
+
 #include <QDebug>
 #include <memory>
 #include <utility>
@@ -163,6 +165,10 @@ struct TranslationsModel::Private {
     QString m_selectedLanguage = g_defaultLangCode;
     std::unique_ptr<QTranslator> m_qtTranslator;
     std::unique_ptr<QTranslator> m_appTranslator;
+
+    // Installed after m_appTranslator, so it is consulted first. Covers the strings the translation
+    // server has never heard of.
+    ForkTranslations m_forkTranslations;
 
     Net::Download* m_indexTask = nullptr;
     QString m_downloadingTranslation;
@@ -480,6 +486,7 @@ bool TranslationsModel::selectLanguage(QString key) const
 
     // if it's the default UI language, finish
     if (langCode == g_defaultLangCode) {
+        d->m_forkTranslations.load(langCode);
         d->m_selectedLanguage = langCode;
         return true;
     }
@@ -530,6 +537,10 @@ bool TranslationsModel::selectLanguage(QString key) const
     } else {
         d->m_appTranslator.reset();
     }
+    // Last, so it sits on top of the catalog the server provided and wins wherever both have an
+    // entry. Done after the early return above so English still loads nothing.
+    d->m_forkTranslations.load(langCode);
+
     d->m_selectedLanguage = langCode;
     return successful;
 }

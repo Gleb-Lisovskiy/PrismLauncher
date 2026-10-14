@@ -81,6 +81,14 @@ class ResourceDownloadDialog : public QDialog, public BasePageProvider {
 
     virtual void confirm();
 
+   public:
+    /** Recomputes whether the confirm button should be enabled.
+     *
+     *  The button normally follows the download queue, which grows through addResource(). A page
+     *  that installs a resource without queueing a download - copying a file that is already on
+     *  disk, say - never touches the queue, so it has to say so itself. */
+    void refreshButtonStatus() { setButtonStatus(); }
+
    protected:
     virtual QString geometrySaveKey() const { return ""; }
     void setButtonStatus();

@@ -155,6 +155,14 @@ void ResourceDownloadDialog::connectButtons()
 
 void ResourceDownloadDialog::confirm()
 {
+    if (getTasks().isEmpty()) {
+        // Nothing was queued. Pages that install a resource without downloading it have already
+        // done their work by the time this button becomes clickable, and an empty review box would
+        // only ask the user to confirm nothing.
+        accept();
+        return;
+    }
+
     auto* confirmDialog = ReviewMessageBox::create(this, tr("Confirm %1 to download").arg(resourcesString()));
     confirmDialog->retranslateUi(resourcesString());
 

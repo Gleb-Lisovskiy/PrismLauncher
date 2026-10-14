@@ -55,13 +55,14 @@ QString checkCopyable(ResourceFolderModel* folder, const QString& path)
 }
 
 /** Shared implementation of the install step; each page only differs in its own type. */
-void doInstall(QWidget* parent,
+void doInstall(ResourceDownloadDialog* dialog,
                BaseInstance& instance,
                LibraryIndex* library,
                LibraryIndex::Type type,
                ModPlatform::IndexedPack::Ptr pack,
                ModPlatform::IndexedVersion& version)
 {
+    QWidget* parent = dialog;
     if (version.is_currently_selected) {
         // Clicking a selected entry again takes it back off the list, as the download flow does.
         version.is_currently_selected = false;
@@ -96,6 +97,10 @@ void doInstall(QWidget* parent,
     }
 
     version.is_currently_selected = true;
+
+    // Nothing was queued for download, so the dialog's confirm button has no way of noticing on
+    // its own that something got picked.
+    dialog->refreshButtonStatus();
 }
 }  // namespace
 
@@ -145,7 +150,7 @@ std::unique_ptr<ModFilterWidget> LocalModPage::createFilterWidget()
 
 void LocalModPage::addResourceToDialog(ModPlatform::IndexedPack::Ptr pack, ModPlatform::IndexedVersion& version)
 {
-    doInstall(this, m_baseInstance, m_library, LibraryIndex::Type::Mod, std::move(pack), version);
+    doInstall(m_parentDialog, m_baseInstance, m_library, LibraryIndex::Type::Mod, std::move(pack), version);
 }
 
 /* --- Resource packs --- */
@@ -185,7 +190,7 @@ LocalResourcePackPage* LocalResourcePackPage::create(ResourcePackDownloadDialog*
 
 void LocalResourcePackPage::addResourceToDialog(ModPlatform::IndexedPack::Ptr pack, ModPlatform::IndexedVersion& version)
 {
-    doInstall(this, m_baseInstance, m_library, LibraryIndex::Type::ResourcePack, std::move(pack), version);
+    doInstall(m_parentDialog, m_baseInstance, m_library, LibraryIndex::Type::ResourcePack, std::move(pack), version);
 }
 
 /* --- Shader packs --- */
@@ -225,5 +230,5 @@ LocalShaderPackPage* LocalShaderPackPage::create(ShaderPackDownloadDialog* dialo
 
 void LocalShaderPackPage::addResourceToDialog(ModPlatform::IndexedPack::Ptr pack, ModPlatform::IndexedVersion& version)
 {
-    doInstall(this, m_baseInstance, m_library, LibraryIndex::Type::ShaderPack, std::move(pack), version);
+    doInstall(m_parentDialog, m_baseInstance, m_library, LibraryIndex::Type::ShaderPack, std::move(pack), version);
 }

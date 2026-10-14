@@ -72,3 +72,12 @@ ecm_add_test(LibraryIndex_test.cpp LINK_LIBRARIES Launcher_logic Qt${QT_VERSION_
 
 ecm_add_test(LibraryVersions_test.cpp LINK_LIBRARIES Launcher_logic Qt${QT_VERSION_MAJOR}::Test
     TEST_NAME LibraryVersions)
+
+ecm_add_test(ForkTranslations_test.cpp LINK_LIBRARIES Launcher_logic Qt${QT_VERSION_MAJOR}::Test
+    TEST_NAME ForkTranslationsCatalog)
+foreach(catalog ${Launcher_Fork_Translations})
+    add_custom_command(TARGET ForkTranslationsCatalog POST_BUILD
+        COMMAND ${CMAKE_COMMAND} -E make_directory "$<TARGET_FILE_DIR:ForkTranslationsCatalog>/translations"
+        COMMAND ${CMAKE_COMMAND} -E copy_if_different ${catalog} "$<TARGET_FILE_DIR:ForkTranslationsCatalog>/translations"
+        COMMENT "Copying the fork's translation catalogs for the test")
+endforeach()
