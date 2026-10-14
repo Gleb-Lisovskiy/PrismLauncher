@@ -106,12 +106,16 @@ LocalModPage::LocalModPage(ModDownloadDialog* dialog, BaseInstance& instance, Li
     // ResourcePage connects none of these; every provider page wires them up in its own
     // constructor. Without the first two the version box is never filled in, m_selectedVersionIndex
     // stays at -1, and the select button stays disabled.
-    connect(m_ui->packView->selectionModel(), &QItemSelectionModel::currentChanged, this, &LocalModPage::onSelectionChanged);
     connect(m_ui->versionSelectionBox, &QComboBox::currentIndexChanged, this, &LocalModPage::onVersionSelectionChanged);
     connect(m_ui->resourceSelectionButton, &QPushButton::clicked, this, &LocalModPage::onResourceSelected);
 
     m_model = new ModModel(instance, new LibraryAPI(library, LibraryIndex::Type::Mod), debugName(), metaEntryBase());
     m_ui->packView->setModel(m_model);
+
+    // Must come after setModel: a view has no selection model until it has one, and
+    // connecting to the nullptr that selectionModel() returns there fails silently,
+    // leaving the whole page inert.
+    connect(m_ui->packView->selectionModel(), &QItemSelectionModel::currentChanged, this, &LocalModPage::onSelectionChanged);
 }
 
 LocalModPage* LocalModPage::create(ModDownloadDialog* dialog, BaseInstance& instance, LibraryIndex* library)
@@ -148,13 +152,17 @@ LocalResourcePackPage::LocalResourcePackPage(ResourcePackDownloadDialog* dialog,
     // ResourcePage connects none of these; every provider page wires them up in its own
     // constructor. Without the first two the version box is never filled in, m_selectedVersionIndex
     // stays at -1, and the select button stays disabled.
-    connect(m_ui->packView->selectionModel(), &QItemSelectionModel::currentChanged, this, &LocalResourcePackPage::onSelectionChanged);
     connect(m_ui->versionSelectionBox, &QComboBox::currentIndexChanged, this, &LocalResourcePackPage::onVersionSelectionChanged);
     connect(m_ui->resourceSelectionButton, &QPushButton::clicked, this, &LocalResourcePackPage::onResourceSelected);
 
     m_model =
         new ResourcePackResourceModel(instance, new LibraryAPI(library, LibraryIndex::Type::ResourcePack), debugName(), metaEntryBase());
     m_ui->packView->setModel(m_model);
+
+    // Must come after setModel: a view has no selection model until it has one, and
+    // connecting to the nullptr that selectionModel() returns there fails silently,
+    // leaving the whole page inert.
+    connect(m_ui->packView->selectionModel(), &QItemSelectionModel::currentChanged, this, &LocalResourcePackPage::onSelectionChanged);
 }
 
 LocalResourcePackPage* LocalResourcePackPage::create(ResourcePackDownloadDialog* dialog, BaseInstance& instance, LibraryIndex* library)
@@ -181,12 +189,16 @@ LocalShaderPackPage::LocalShaderPackPage(ShaderPackDownloadDialog* dialog, BaseI
     // ResourcePage connects none of these; every provider page wires them up in its own
     // constructor. Without the first two the version box is never filled in, m_selectedVersionIndex
     // stays at -1, and the select button stays disabled.
-    connect(m_ui->packView->selectionModel(), &QItemSelectionModel::currentChanged, this, &LocalShaderPackPage::onSelectionChanged);
     connect(m_ui->versionSelectionBox, &QComboBox::currentIndexChanged, this, &LocalShaderPackPage::onVersionSelectionChanged);
     connect(m_ui->resourceSelectionButton, &QPushButton::clicked, this, &LocalShaderPackPage::onResourceSelected);
 
     m_model = new ShaderPackResourceModel(instance, new LibraryAPI(library, LibraryIndex::Type::ShaderPack), debugName(), metaEntryBase());
     m_ui->packView->setModel(m_model);
+
+    // Must come after setModel: a view has no selection model until it has one, and
+    // connecting to the nullptr that selectionModel() returns there fails silently,
+    // leaving the whole page inert.
+    connect(m_ui->packView->selectionModel(), &QItemSelectionModel::currentChanged, this, &LocalShaderPackPage::onSelectionChanged);
 }
 
 LocalShaderPackPage* LocalShaderPackPage::create(ShaderPackDownloadDialog* dialog, BaseInstance& instance, LibraryIndex* library)

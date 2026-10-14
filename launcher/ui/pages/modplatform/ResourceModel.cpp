@@ -338,6 +338,12 @@ std::optional<ResourceAPI::SortingMethod> ResourceModel::getCurrentSortingMethod
 
 std::optional<QIcon> ResourceModel::getIcon(QModelIndex& index, const QUrl& url)
 {
+    // Nothing to fetch: a project without a logo image leaves this empty, and asking the network
+    // for "" only produces a ProtocolUnknownError and a failed task.
+    if (url.isEmpty()) {
+        return {};
+    }
+
     QPixmap pixmap;
     if (QPixmapCache::find(url.toString(), &pixmap)) {
         return { pixmap };
