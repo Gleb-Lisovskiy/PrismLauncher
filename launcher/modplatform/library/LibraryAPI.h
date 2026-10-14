@@ -4,6 +4,8 @@
 
 #pragma once
 
+#include <QJsonArray>
+
 #include "minecraft/mod/LibraryIndex.h"
 #include "modplatform/ResourceAPI.h"
 #include "tasks/Task.h"
@@ -21,7 +23,7 @@
  */
 class LibraryAPI : public ResourceAPI {
    public:
-    LibraryAPI(LibraryIndex* library, LibraryIndex::Type type);
+    LibraryAPI(LibraryIndex* library, LibraryIndex::Type type, QString gameVersion);
 
     auto getSortingMethods() const -> QList<SortingMethod> override;
     std::pair<Task::Ptr, QByteArray*> getProjects(QStringList addonIds) const override;
@@ -46,14 +48,21 @@ class LibraryAPI : public ResourceAPI {
     void loadExtraPackInfo(ModPlatform::IndexedPack&, QJsonObject&) const override {}
 
     /** Builds the IndexedPack for a library entry. */
-    [[nodiscard]] static ModPlatform::IndexedPack::Ptr toPack(const LibraryIndex& library, const LibraryIndex::Entry& entry);
+    [[nodiscard]] ModPlatform::IndexedPack::Ptr toPack(const LibraryIndex::Entry& entry) const;
 
     /** Builds the single IndexedVersion for a library entry.
      *
      *  The downloadUrl holds the local file path, not a URL. */
-    [[nodiscard]] static ModPlatform::IndexedVersion toVersion(const LibraryIndex& library, const LibraryIndex::Entry& entry);
+    [[nodiscard]] ModPlatform::IndexedVersion toVersion(const LibraryIndex::Entry& entry) const;
 
    private:
     LibraryIndex* m_library = nullptr;
     LibraryIndex::Type m_type;
+
+    /** Minecraft version of the instance the dialog was opened for.
+     *
+     *  A jar on disk does not record which Minecraft it was built for in any field the page filter
+     *  can read, and ModModel::checkVersionFilters drops every version whose mcVersion misses the
+     *  instance. Without this the tab lists projects and then finds no version for any of them. */
+    QString m_gameVersion;
 };

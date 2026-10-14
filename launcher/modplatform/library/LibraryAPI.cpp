@@ -26,9 +26,11 @@ void answerAsync(Callback&& callbacks, Result result)
 }
 }  // namespace
 
-LibraryAPI::LibraryAPI(LibraryIndex* library, LibraryIndex::Type type) : m_library(library), m_type(type) {}
+LibraryAPI::LibraryAPI(LibraryIndex* library, LibraryIndex::Type type, QString gameVersion)
+    : m_library(library), m_type(type), m_gameVersion(std::move(gameVersion))
+{}
 
-ModPlatform::IndexedPack::Ptr LibraryAPI::toPack(const LibraryIndex& library, const LibraryIndex::Entry& entry)
+ModPlatform::IndexedPack::Ptr LibraryAPI::toPack(const LibraryIndex::Entry& entry) const
 {
     auto pack = std::make_shared<ModPlatform::IndexedPack>();
     pack->addonId = entry.id;
@@ -45,26 +47,40 @@ ModPlatform::IndexedPack::Ptr LibraryAPI::toPack(const LibraryIndex& library, co
     // swapping the pack out from under the version list while the user is picking from it.
     pack->extraDataLoaded = true;
 
-    auto version = toVersion(library, entry);
+    auto version = toVersion(entry);
     pack->versions.append(version);
     return pack;
 }
 
-ModPlatform::IndexedVersion LibraryAPI::toVersion(const LibraryIndex& library, const LibraryIndex::Entry& entry)
+ModPlatform::IndexedVersion LibraryAPI::toVersion(const LibraryIndex::Entry& entry) const
 {
     ModPlatform::IndexedVersion version;
     version.addonId = entry.id;
     version.fileId = entry.fileId.isEmpty() ? entry.id : entry.fileId;
     version.version = entry.details.version.isEmpty() ? QFileInfo(entry.file).fileName() : entry.details.version;
     version.version_number = version.version;
-    version.fileName = QFileInfo(library.absoluteFilePath(entry)).fileName();
+    version.fileName = QFileInfo(m_library->absoluteFilePath(entry)).fileName();
     // Not a URL: this is the path of a file that is already on disk.
-    version.downloadUrl = library.absoluteFilePath(entry);
+    version.downloadUrl = m_library->absoluteFilePath(entry);
     version.date = entry.addedAt.toString(Qt::ISODate);
     version.side = ModPlatform::Side::UniversalSide;
     version.is_preferred = true;
+
+    // Both of these are checked by the page's filter, and an unset value in either of them makes it
+    // reject the version rather than offer it. A local file is a plain release of whatever the
+    // instance runs, so both are filled in from the instance rather than left blank.
+    version.version_type = ModPlatform::IndexedVersionType::Release;
+
     if (!entry.details.mcversion.isEmpty()) {
+        // The field is free text a human typed into the manifest, so the parts need trimming before
+        // they can be compared against the instance's version.
         version.mcVersion = entry.details.mcversion.split(',', Qt::SkipEmptyParts);
+        for (auto& mcVersion : version.mcVersion) {
+            mcVersion = mcVersion.trimmed();
+        }
+        version.mcVersion.removeAll("");
+    } else if (!m_gameVersion.isEmpty()) {
+        version.mcVersion = QStringList{ m_gameVersion };
     }
     return version;
 }
@@ -92,7 +108,7 @@ Task::Ptr LibraryAPI::searchProjects(SearchArgs&& args, Callback<QList<ModPlatfo
                 !entry.details.mod_id.contains(*args.search, Qt::CaseInsensitive)) {
                 continue;
             }
-            packs.append(toPack(*m_library, entry));
+            packs.append(toPack(entry));
         }
     }
 
@@ -109,7 +125,7 @@ Task::Ptr LibraryAPI::getProjectVersions(VersionSearchArgs&& args, Callback<QVec
     if (m_library && args.pack) {
         if (const auto* entry = m_library->find(args.pack->addonId.toString())) {
             if (entry->type == m_type && !entry->broken) {
-                versions.append(toVersion(*m_library, *entry));
+                versions.append(toVersion(*entry));
             }
         }
     }
@@ -122,7 +138,7 @@ Task::Ptr LibraryAPI::getProjectInfo(ProjectInfoArgs&& args, Callback<ModPlatfor
 {
     if (m_library && args.pack) {
         if (const auto* entry = m_library->find(args.pack->addonId.toString())) {
-            auto pack = toPack(*m_library, *entry);
+            auto pack = toPack(*entry);
             // Answered on the next event loop turn rather than inline: this is called from
             // loadEntry, which runs inside the selection model's change notification, and swapping
             // the pack underneath it there leaves the page's version list pointing at a pack that
