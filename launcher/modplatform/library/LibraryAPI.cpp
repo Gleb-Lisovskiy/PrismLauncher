@@ -40,6 +40,10 @@ ModPlatform::IndexedPack::Ptr LibraryAPI::toPack(const LibraryIndex& library, co
     pack->description = entry.details.description;
     pack->websiteUrl = entry.details.homeurl;
     pack->versionsLoaded = true;
+    // A local file has no long description, gallery or donation links to fetch, so there is nothing
+    // for getProjectInfo to look up. Saying so keeps the page from asking, and keeps it from
+    // swapping the pack out from under the version list while the user is picking from it.
+    pack->extraDataLoaded = true;
 
     auto version = toVersion(library, entry);
     pack->versions.append(version);
@@ -92,6 +96,8 @@ Task::Ptr LibraryAPI::searchProjects(SearchArgs&& args, Callback<QList<ModPlatfo
         }
     }
 
+    qInfo() << "Local files search for" << (args.search ? *args.search : QString("(no term)")) << "returned" << packs.size() << "of type"
+            << static_cast<int>(m_type) << "entries";
     answerAsync(std::move(callbacks), std::move(packs));
     return nullptr;
 }
@@ -117,11 +123,15 @@ Task::Ptr LibraryAPI::getProjectInfo(ProjectInfoArgs&& args, Callback<ModPlatfor
     if (m_library && args.pack) {
         if (const auto* entry = m_library->find(args.pack->addonId.toString())) {
             auto pack = toPack(*m_library, *entry);
-            callbacks.on_succeed(pack);
+            // Answered on the next event loop turn rather than inline: this is called from
+            // loadEntry, which runs inside the selection model's change notification, and swapping
+            // the pack underneath it there leaves the page's version list pointing at a pack that
+            // is no longer the one in the view.
+            answerAsync(std::move(callbacks), std::move(pack));
             return nullptr;
         }
     }
     // Falling through without calling the callback would leave the page spinning forever.
-    callbacks.on_fail(QObject::tr("No such local file"), 0);
+    answerAsync(std::move(callbacks), ModPlatform::IndexedPack::Ptr());
     return nullptr;
 }

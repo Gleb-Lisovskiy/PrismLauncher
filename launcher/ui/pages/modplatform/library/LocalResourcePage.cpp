@@ -103,8 +103,11 @@ void doInstall(QWidget* parent,
 LocalModPage::LocalModPage(ModDownloadDialog* dialog, BaseInstance& instance, LibraryIndex* library)
     : ModPage(dialog, instance), m_library(library)
 {
-    // The base class never wires this up; each provider page does it in its own constructor.
-    // Without it the "Select ... for download" button does nothing.
+    // ResourcePage connects none of these; every provider page wires them up in its own
+    // constructor. Without the first two the version box is never filled in, m_selectedVersionIndex
+    // stays at -1, and the select button stays disabled.
+    connect(m_ui->packView->selectionModel(), &QItemSelectionModel::currentChanged, this, &LocalModPage::onSelectionChanged);
+    connect(m_ui->versionSelectionBox, &QComboBox::currentIndexChanged, this, &LocalModPage::onVersionSelectionChanged);
     connect(m_ui->resourceSelectionButton, &QPushButton::clicked, this, &LocalModPage::onResourceSelected);
 
     m_model = new ModModel(instance, new LibraryAPI(library, LibraryIndex::Type::Mod), debugName(), metaEntryBase());
@@ -142,8 +145,11 @@ void LocalModPage::addResourceToDialog(ModPlatform::IndexedPack::Ptr pack, ModPl
 LocalResourcePackPage::LocalResourcePackPage(ResourcePackDownloadDialog* dialog, BaseInstance& instance, LibraryIndex* library)
     : ResourcePackResourcePage(dialog, instance), m_library(library)
 {
-    // The base class never wires this up; each provider page does it in its own constructor.
-    // Without it the "Select ... for download" button does nothing.
+    // ResourcePage connects none of these; every provider page wires them up in its own
+    // constructor. Without the first two the version box is never filled in, m_selectedVersionIndex
+    // stays at -1, and the select button stays disabled.
+    connect(m_ui->packView->selectionModel(), &QItemSelectionModel::currentChanged, this, &LocalResourcePackPage::onSelectionChanged);
+    connect(m_ui->versionSelectionBox, &QComboBox::currentIndexChanged, this, &LocalResourcePackPage::onVersionSelectionChanged);
     connect(m_ui->resourceSelectionButton, &QPushButton::clicked, this, &LocalResourcePackPage::onResourceSelected);
 
     m_model =
@@ -172,8 +178,11 @@ void LocalResourcePackPage::addResourceToDialog(ModPlatform::IndexedPack::Ptr pa
 LocalShaderPackPage::LocalShaderPackPage(ShaderPackDownloadDialog* dialog, BaseInstance& instance, LibraryIndex* library)
     : ShaderPackResourcePage(dialog, instance), m_library(library)
 {
-    // The base class never wires this up; each provider page does it in its own constructor.
-    // Without it the "Select ... for download" button does nothing.
+    // ResourcePage connects none of these; every provider page wires them up in its own
+    // constructor. Without the first two the version box is never filled in, m_selectedVersionIndex
+    // stays at -1, and the select button stays disabled.
+    connect(m_ui->packView->selectionModel(), &QItemSelectionModel::currentChanged, this, &LocalShaderPackPage::onSelectionChanged);
+    connect(m_ui->versionSelectionBox, &QComboBox::currentIndexChanged, this, &LocalShaderPackPage::onVersionSelectionChanged);
     connect(m_ui->resourceSelectionButton, &QPushButton::clicked, this, &LocalShaderPackPage::onResourceSelected);
 
     m_model = new ShaderPackResourceModel(instance, new LibraryAPI(library, LibraryIndex::Type::ShaderPack), debugName(), metaEntryBase());
