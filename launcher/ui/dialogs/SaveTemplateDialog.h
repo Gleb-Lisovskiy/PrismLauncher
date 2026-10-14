@@ -44,4 +44,6 @@ class SaveTemplateDialog : public QDialog {
 
     Ui::SaveTemplateDialog* ui = nullptr;
     bool m_nameTouched = false;
+    /** Whether the selected instance actually has a component list to remember. */
+    bool m_hasComponents = false;
 };

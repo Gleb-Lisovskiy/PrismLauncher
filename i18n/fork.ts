@@ -2,6 +2,25 @@
 <!DOCTYPE TS>
 <TS version="2.1">
 <context>
+    <name>EditTemplateDialog</name>
+    <message>
+        <source>Edit Template</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Name:</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Description:</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Optional. Markdown is supported.</source>
+        <translation type="unfinished"></translation>
+    </message>
+</context>
+<context>
     <name>InstanceTemplateStore</name>
     <message>
         <source>The templates file is not a JSON object.</source>
@@ -910,6 +929,14 @@ Are you sure?</source>
         <source>The instance settings you changed are remembered.</source>
         <translation type="unfinished"></translation>
     </message>
+    <message>
+        <source>Description:</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Optional. Markdown is supported.</source>
+        <translation type="unfinished"></translation>
+    </message>
 </context>
 <context>
     <name>ShaderPackPage</name>
@@ -1000,6 +1027,10 @@ Are you sure?</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
+        <source>The template does not remember a Minecraft version. Save it again from an instance.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
         <source>Copying template files... (%1/%2)</source>
         <translation type="unfinished"></translation>
     </message>
@@ -1012,10 +1043,6 @@ Are you sure?</source>
     </message>
     <message>
         <source>Save from an instance...</source>
-        <translation type="unfinished"></translation>
-    </message>
-    <message>
-        <source>Rename</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
@@ -1059,14 +1086,6 @@ Are you sure?</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <source>Rename template</source>
-        <translation type="unfinished"></translation>
-    </message>
-    <message>
-        <source>Template name:</source>
-        <translation type="unfinished"></translation>
-    </message>
-    <message>
         <source>Delete template</source>
         <translation type="unfinished"></translation>
     </message>
@@ -1080,6 +1099,10 @@ Are you sure?</source>
     </message>
     <message>
         <source>Could not read the templates file: %1</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Edit...</source>
         <translation type="unfinished"></translation>
     </message>
 </context>

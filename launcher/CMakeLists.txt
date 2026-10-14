@@ -1096,6 +1096,8 @@ SET(LAUNCHER_SOURCES
     ui/dialogs/NewInstanceDialog.h
     ui/dialogs/SaveTemplateDialog.cpp
     ui/dialogs/SaveTemplateDialog.h
+    ui/dialogs/EditTemplateDialog.cpp
+    ui/dialogs/EditTemplateDialog.h
     ui/dialogs/NewsDialog.cpp
     ui/dialogs/NewsDialog.h
     ui/pagedialog/PageDialog.cpp
@@ -1278,6 +1280,7 @@ qt_wrap_ui(LAUNCHER_UI
     ui/dialogs/ProgressDialog.ui
     ui/dialogs/NewInstanceDialog.ui
     ui/dialogs/SaveTemplateDialog.ui
+    ui/dialogs/EditTemplateDialog.ui
     ui/dialogs/NetworkJobFailedDialog.ui
     ui/dialogs/NewComponentDialog.ui
     ui/dialogs/NewsDialog.ui

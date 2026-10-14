@@ -34,7 +34,7 @@ class SettingsObject;
  *      everything the template does not mention;
  *    - a list of entries in the local files library (see LibraryIndex) that were installed in the
  *      instance, so the same files are laid down in the new one;
- *    - a name and an icon.
+ *    - a name, an icon, and an optional markdown description.
  *
  *  Templates are user data rather than files on disk, so unlike the library they are kept in a
  *  small JSON document (see InstanceTemplateStore). */
@@ -47,6 +47,8 @@ struct InstanceTemplate {
 
     QString id;
     QString name;
+    /** Free-form markdown shown in the template's preview; optional. */
+    QString description;
     QString iconKey = QStringLiteral("default");
     QDateTime createdAt;
     QList<Component> components;

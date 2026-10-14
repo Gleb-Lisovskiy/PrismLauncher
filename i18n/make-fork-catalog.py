@@ -97,11 +97,9 @@ RU = {
     "Files taken from your local files folder:": "Файлы из папки локальных файлов:",
     "Minecraft %1": "Minecraft %1",
     "Unknown Minecraft version": "Неизвестная версия Minecraft",
-    "Rename": "Переименовать",
+    "Edit...": "Изменить...",
     "Delete": "Удалить",
     "Refresh": "Обновить",
-    "Rename template": "Переименовать шаблон",
-    "Template name:": "Имя шаблона:",
     "Delete template": "Удалить шаблон",
     "Delete the template \"%1\"? This cannot be undone.":
         "Удалить шаблон «%1»? Это действие необратимо.",
@@ -112,6 +110,8 @@ RU = {
     "Save as Template": "Сохранить как шаблон",
     "Instance:": "Инстанс:",
     "Name:": "Имя:",
+    "Description:": "Описание:",
+    "Optional. Markdown is supported.": "Необязательно. Поддерживается markdown.",
     "Remember the instance settings you changed":
         "Запомнить изменённые настройки инстанса",
     "Include files taken from your local files folder":
@@ -121,8 +121,13 @@ RU = {
     "There are no instances to save a template from yet.":
         "Пока нет инстансов, из которых можно сохранить шаблон.",
 
+    # --- editing a saved template ---
+    "Edit Template": "Изменить шаблон",
+
     # --- creating an instance from a template ---
     "Creating instance from template \"%1\"": "Создание инстанса из шаблона «%1»",
+    "The template does not remember a Minecraft version. Save it again from an instance.":
+        "Шаблон не помнит версию Minecraft. Сохраните его заново из инстанса.",
     "Copying template files... (%1/%2)": "Копирование файлов шаблона... (%1/%2)",
 
     # --- the templates file ---

@@ -9,10 +9,12 @@
 #include <QDialogButtonBox>
 #include <QFileInfo>
 #include <QLineEdit>
+#include <QPlainTextEdit>
 #include <QPushButton>
 
 #include "Application.h"
 #include "InstanceList.h"
+#include "Markdown.h"
 #include "minecraft/MinecraftInstance.h"
 #include "minecraft/mod/LibraryIndex.h"
 
@@ -31,6 +33,7 @@ SaveTemplateDialog::SaveTemplateDialog(QWidget* parent) : QDialog(parent), ui(ne
     connect(ui->instanceBox, &QComboBox::currentIndexChanged, this, &SaveTemplateDialog::onInstanceChanged);
     connect(ui->nameEdit, &QLineEdit::textEdited, this, [this] { m_nameTouched = true; });
     connect(ui->nameEdit, &QLineEdit::textChanged, this, &SaveTemplateDialog::updateDialogState);
+    connect(ui->descriptionEdit, &QPlainTextEdit::textChanged, this, &SaveTemplateDialog::updatePreview);
     connect(ui->settingsCheck, &QCheckBox::toggled, this, &SaveTemplateDialog::updatePreview);
     connect(ui->libraryCheck, &QCheckBox::toggled, this, &SaveTemplateDialog::updatePreview);
     connect(ui->buttonBox, &QDialogButtonBox::accepted, this, &SaveTemplateDialog::accept);
@@ -60,6 +63,7 @@ InstanceTemplate SaveTemplateDialog::capture(bool applyChecks) const
         return {};
 
     InstanceTemplate tpl = InstanceTemplate::captureFrom(*instance, ui->nameEdit->text().trimmed());
+    tpl.description = ui->descriptionEdit->toPlainText().trimmed();
     if (applyChecks) {
         if (!ui->settingsCheck->isChecked())
             tpl.settings.clear();
@@ -90,12 +94,14 @@ void SaveTemplateDialog::updatePreview()
 {
     auto* instance = selectedInstance();
     if (!instance) {
+        m_hasComponents = false;
         ui->preview->setHtml(QStringLiteral("<p>%1</p>").arg(tr("There are no instances to save a template from yet.")));
         return;
     }
 
     // Decide what there is to offer from the full picture, before the checkboxes take anything away.
     const InstanceTemplate everything = capture(false);
+    m_hasComponents = !everything.components.isEmpty();
     ui->settingsCheck->setEnabled(!everything.settings.isEmpty());
     ui->libraryCheck->setEnabled(!everything.libraryEntries.isEmpty());
 
@@ -115,6 +121,8 @@ void SaveTemplateDialog::updatePreview()
 
     QStringList html;
     html << QStringLiteral("<p>%1</p>").arg(game);
+    if (!tpl.description.isEmpty())
+        html << markdownToHTML(tpl.description);
 
     QStringList names;
     auto* library = APPLICATION->library();
@@ -136,6 +144,7 @@ void SaveTemplateDialog::updatePreview()
 
 void SaveTemplateDialog::updateDialogState()
 {
-    const bool ok = selectedInstance() != nullptr && !ui->nameEdit->text().trimmed().isEmpty();
+    // Without a component list the template cannot create anything, so it is not worth saving.
+    const bool ok = selectedInstance() != nullptr && m_hasComponents && !ui->nameEdit->text().trimmed().isEmpty();
     ui->buttonBox->button(QDialogButtonBox::Ok)->setEnabled(ok);
 }

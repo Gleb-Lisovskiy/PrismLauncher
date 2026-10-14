@@ -7,7 +7,7 @@
     <x>0</x>
     <y>0</y>
     <width>520</width>
-    <height>420</height>
+    <height>480</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -35,6 +35,26 @@
      </item>
      <item row="1" column="1">
       <widget class="QLineEdit" name="nameEdit"/>
+     </item>
+     <item row="2" column="0">
+      <widget class="QLabel" name="descriptionLabel">
+       <property name="text">
+        <string>Description:</string>
+       </property>
+      </widget>
+     </item>
+     <item row="2" column="1">
+      <widget class="QPlainTextEdit" name="descriptionEdit">
+       <property name="maximumSize">
+        <size>
+         <width>16777215</width>
+         <height>80</height>
+        </size>
+       </property>
+       <property name="placeholderText">
+        <string>Optional. Markdown is supported.</string>
+       </property>
+      </widget>
      </item>
     </layout>
    </item>

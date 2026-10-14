@@ -31,6 +31,8 @@ pulled into the catalog for a context the fork has no business translating.
     launcher/minecraft/mod/tasks/LibraryDownloadTask.cpp \
     launcher/minecraft/mod/tasks/LocalResourceCopyTask.cpp \
     launcher/ui/dialogs/ResourceDownloadDialog.cpp \
+    launcher/ui/dialogs/EditTemplateDialog.cpp \
+    launcher/ui/dialogs/EditTemplateDialog.ui \
     launcher/ui/dialogs/SaveTemplateDialog.cpp \
     launcher/ui/dialogs/SaveTemplateDialog.ui \
     launcher/ui/pages/global/LauncherPage.cpp \

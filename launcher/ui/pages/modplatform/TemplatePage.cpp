@@ -6,15 +6,16 @@
 #include "ui_TemplatePage.h"
 
 #include <QFileInfo>
-#include <QInputDialog>
 #include <QListWidgetItem>
 #include <QMessageBox>
 
 #include "Application.h"
 #include "InstanceTemplate.h"
+#include "Markdown.h"
 #include "icons/IconList.h"
 #include "minecraft/TemplateInstanceCreationTask.h"
 #include "minecraft/mod/LibraryIndex.h"
+#include "ui/dialogs/EditTemplateDialog.h"
 #include "ui/dialogs/NewInstanceDialog.h"
 #include "ui/dialogs/SaveTemplateDialog.h"
 
@@ -24,7 +25,7 @@ TemplatePage::TemplatePage(NewInstanceDialog* dialog, QWidget* parent) : QWidget
 
     connect(ui->templateList, &QListWidget::itemSelectionChanged, this, &TemplatePage::onSelectionChanged);
     connect(ui->fromInstanceButton, &QPushButton::clicked, this, &TemplatePage::onSaveFromInstance);
-    connect(ui->renameButton, &QPushButton::clicked, this, &TemplatePage::onRename);
+    connect(ui->editButton, &QPushButton::clicked, this, &TemplatePage::onEdit);
     connect(ui->deleteButton, &QPushButton::clicked, this, &TemplatePage::onDelete);
     connect(ui->refreshButton, &QPushButton::clicked, this, &TemplatePage::onRefresh);
 
@@ -131,7 +132,7 @@ void TemplatePage::suggestCurrent()
 void TemplatePage::updateButtons()
 {
     const bool hasSelection = currentTemplate() != nullptr;
-    ui->renameButton->setEnabled(hasSelection);
+    ui->editButton->setEnabled(hasSelection);
     ui->deleteButton->setEnabled(hasSelection);
 }
 
@@ -157,6 +158,8 @@ void TemplatePage::updatePreview()
             game += QLatin1Char(' ') + loaderVersion.toHtmlEscaped();
     }
     html << QStringLiteral("<h3>%1</h3>").arg(tpl->name.toHtmlEscaped());
+    if (!tpl->description.isEmpty())
+        html << markdownToHTML(tpl->description);
     html << QStringLiteral("<p>%1</p>").arg(game);
 
     if (tpl->libraryEntries.isEmpty()) {
@@ -195,22 +198,19 @@ void TemplatePage::onSaveFromInstance()
     reload();
 }
 
-void TemplatePage::onRename()
+void TemplatePage::onEdit()
 {
     const auto* tpl = currentTemplate();
     if (!tpl)
         return;
 
-    bool ok = false;
-    const QString name =
-        QInputDialog::getText(this, tr("Rename template"), tr("Template name:"), QLineEdit::Normal, tpl->name, &ok).trimmed();
-    if (!ok || name.isEmpty())
+    EditTemplateDialog dlg(*tpl, this);
+    if (dlg.exec() != QDialog::Accepted)
         return;
 
-    InstanceTemplate renamed = *tpl;
-    renamed.name = name;
-    m_selectedId = renamed.id;
-    APPLICATION->templates()->update(renamed);
+    InstanceTemplate edited = dlg.templateToSave();
+    m_selectedId = edited.id;
+    APPLICATION->templates()->update(edited);
     reload();
 }
 

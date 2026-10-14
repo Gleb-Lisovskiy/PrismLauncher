@@ -20,8 +20,8 @@ class NewInstanceDialog;
  *
  *  Lists the recipes the user saved and hands the selected one to the dialog as the task to run,
  *  exactly like the platform pages hand over a VanillaCreationTask. Managing the list lives here
- *  too: saving the current state of an instance as a new template, renaming one, and deleting one
- *  that is no longer wanted. */
+ *  too: saving the current state of an instance as a new template, editing a saved one, and
+ *  deleting one that is no longer wanted. */
 class TemplatePage : public QWidget, public BasePage {
     Q_OBJECT
 
@@ -41,7 +41,7 @@ class TemplatePage : public QWidget, public BasePage {
    private slots:
     void onSelectionChanged();
     void onSaveFromInstance();
-    void onRename();
+    void onEdit();
     void onDelete();
     void onRefresh();
 

@@ -231,6 +231,8 @@ QJsonObject InstanceTemplate::toJson() const
     QJsonObject obj;
     obj.insert("id", id);
     obj.insert("name", name);
+    if (!description.isEmpty())
+        obj.insert("description", description);
     obj.insert("icon", iconKey);
     if (createdAt.isValid())
         obj.insert("created-at", createdAt.toString(Qt::ISODate));
@@ -262,6 +264,7 @@ InstanceTemplate InstanceTemplate::fromJson(const QJsonObject& json)
     InstanceTemplate tpl;
     tpl.id = json.value("id").toString();
     tpl.name = json.value("name").toString();
+    tpl.description = json.value("description").toString();
     tpl.iconKey = json.value("icon").toString(QStringLiteral("default"));
     tpl.createdAt = QDateTime::fromString(json.value("created-at").toString(), Qt::ISODate);
 

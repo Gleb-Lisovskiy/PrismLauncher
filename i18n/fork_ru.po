@@ -10,6 +10,22 @@ msgstr ""
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
 
+msgctxt "EditTemplateDialog"
+msgid "Description:"
+msgstr "Описание:"
+
+msgctxt "EditTemplateDialog"
+msgid "Edit Template"
+msgstr "Изменить шаблон"
+
+msgctxt "EditTemplateDialog"
+msgid "Name:"
+msgstr "Имя:"
+
+msgctxt "EditTemplateDialog"
+msgid "Optional. Markdown is supported."
+msgstr "Необязательно. Поддерживается markdown."
+
 msgctxt "InstanceTemplateStore"
 msgid "Could not create the folder for the templates file."
 msgstr "Не удалось создать папку для файла шаблонов."
@@ -127,6 +143,10 @@ msgid "Save to Local Files"
 msgstr "Сохранить в локальные файлы"
 
 msgctxt "SaveTemplateDialog"
+msgid "Description:"
+msgstr "Описание:"
+
+msgctxt "SaveTemplateDialog"
 msgid "Files taken from your local files folder:"
 msgstr "Файлы из папки локальных файлов:"
 
@@ -145,6 +165,10 @@ msgstr "Minecraft %1"
 msgctxt "SaveTemplateDialog"
 msgid "Name:"
 msgstr "Имя:"
+
+msgctxt "SaveTemplateDialog"
+msgid "Optional. Markdown is supported."
+msgstr "Необязательно. Поддерживается markdown."
 
 msgctxt "SaveTemplateDialog"
 msgid "Remember the instance settings you changed"
@@ -178,6 +202,10 @@ msgctxt "TemplateCreationTask"
 msgid "Creating instance from template \"%1\""
 msgstr "Создание инстанса из шаблона «%1»"
 
+msgctxt "TemplateCreationTask"
+msgid "The template does not remember a Minecraft version. Save it again from an instance."
+msgstr "Шаблон не помнит версию Minecraft. Сохраните его заново из инстанса."
+
 msgctxt "TemplatePage"
 msgid "Could not read the templates file: %1"
 msgstr "Не удалось прочитать файл шаблонов: %1"
@@ -193,6 +221,10 @@ msgstr "Удалить шаблон"
 msgctxt "TemplatePage"
 msgid "Delete the template \"%1\"? This cannot be undone."
 msgstr "Удалить шаблон «%1»? Это действие необратимо."
+
+msgctxt "TemplatePage"
+msgid "Edit..."
+msgstr "Изменить..."
 
 msgctxt "TemplatePage"
 msgid "Files taken from your local files folder:"
@@ -219,14 +251,6 @@ msgid "Refresh"
 msgstr "Обновить"
 
 msgctxt "TemplatePage"
-msgid "Rename"
-msgstr "Переименовать"
-
-msgctxt "TemplatePage"
-msgid "Rename template"
-msgstr "Переименовать шаблон"
-
-msgctxt "TemplatePage"
 msgid "Save from an instance..."
 msgstr "Сохранить из инстанса..."
 
@@ -237,10 +261,6 @@ msgstr "Выберите шаблон, чтобы увидеть, что он с
 msgctxt "TemplatePage"
 msgid "Start from a recipe you saved earlier: the game version and mod loader, the instance settings you changed, and files taken from your local files folder."
 msgstr "Начните с сохранённого рецепта: версия игры и загрузчик модов, изменённые настройки инстанса и файлы из папки локальных файлов."
-
-msgctxt "TemplatePage"
-msgid "Template name:"
-msgstr "Имя шаблона:"
 
 msgctxt "TemplatePage"
 msgid "Templates"

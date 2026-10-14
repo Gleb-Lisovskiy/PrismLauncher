@@ -33,6 +33,7 @@ class InstanceTemplateTest : public QObject {
         InstanceTemplate tpl;
         tpl.id = QStringLiteral("a-template");
         tpl.name = QStringLiteral("My recipe");
+        tpl.description = QStringLiteral("A recipe with **notes**.");
         tpl.iconKey = QStringLiteral("default");
         tpl.createdAt = QDateTime::fromString(QStringLiteral("2026-01-02T03:04:05"), Qt::ISODate);
         tpl.components = { { QStringLiteral("net.minecraft"), QStringLiteral("1.20.1") },
@@ -73,6 +74,7 @@ void InstanceTemplateTest::roundTripsThroughJson()
 
     QCOMPARE(restored.id, original.id);
     QCOMPARE(restored.name, original.name);
+    QCOMPARE(restored.description, original.description);
     QCOMPARE(restored.iconKey, original.iconKey);
     QCOMPARE(restored.createdAt, original.createdAt);
     QCOMPARE(restored.components.size(), original.components.size());
@@ -97,6 +99,7 @@ void InstanceTemplateTest::fromJsonToleratesGarbage()
     QCOMPARE(tpl.components.size(), 0);  // every entry was missing a half
     QCOMPARE(tpl.libraryEntries, QStringList{ QStringLiteral("keep") });
     QVERIFY(tpl.settings.isEmpty());
+    QVERIFY(tpl.description.isEmpty());
     QCOMPARE(tpl.iconKey, QStringLiteral("default"));
 }
 
