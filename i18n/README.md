@@ -25,10 +25,14 @@ pulled into the catalog for a context the fork has no business translating.
 
 ```sh
 /usr/lib/qt6/bin/lupdate -locations none -no-obsolete -no-ui-lines \
+    launcher/InstanceTemplate.cpp \
+    launcher/minecraft/TemplateInstanceCreationTask.cpp \
     launcher/minecraft/mod/LibraryIndex.cpp \
     launcher/minecraft/mod/tasks/LibraryDownloadTask.cpp \
     launcher/minecraft/mod/tasks/LocalResourceCopyTask.cpp \
     launcher/ui/dialogs/ResourceDownloadDialog.cpp \
+    launcher/ui/dialogs/SaveTemplateDialog.cpp \
+    launcher/ui/dialogs/SaveTemplateDialog.ui \
     launcher/ui/pages/global/LauncherPage.cpp \
     launcher/ui/pages/global/LauncherPage.ui \
     launcher/ui/pages/instance/ModFolderPage.cpp \
@@ -42,6 +46,8 @@ pulled into the catalog for a context the fork has no business translating.
     launcher/ui/pages/modplatform/ResourcePage.cpp \
     launcher/ui/pages/modplatform/ResourcePage.ui \
     launcher/ui/pages/modplatform/ShaderPackPage.h \
+    launcher/ui/pages/modplatform/TemplatePage.cpp \
+    launcher/ui/pages/modplatform/TemplatePage.ui \
     launcher/ui/pages/modplatform/TexturePackPage.h \
     -ts i18n/fork.ts
 cd i18n && python3 make-fork-catalog.py

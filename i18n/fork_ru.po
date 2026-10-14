@@ -10,6 +10,14 @@ msgstr ""
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
 
+msgctxt "InstanceTemplateStore"
+msgid "Could not create the folder for the templates file."
+msgstr "Не удалось создать папку для файла шаблонов."
+
+msgctxt "InstanceTemplateStore"
+msgid "The templates file is not a JSON object."
+msgstr "Файл шаблонов не является объектом JSON."
+
 msgctxt "LauncherPage"
 msgid "&Local Files:"
 msgstr "&Локальные файлы:"
@@ -103,14 +111,6 @@ msgid "'%1' does not allow downloads from third-party launchers and no project p
 msgstr "«%1» не разрешает загрузку сторонними лаунчерами, и страница проекта неизвестна."
 
 msgctxt "ResourceDownload::ResourcePage"
-msgid "'%1' is now in your local files. It appears under the 'Local Files' tab whenever you install mods, resource packs or shader packs into an instance."
-msgstr "«%1» теперь в локальных файлах. Он появится на вкладке «Локальные файлы», когда вы ставите моды, ресурспаки или шейдерпаки в инстанс."
-
-msgctxt "ResourceDownload::ResourcePage"
-msgid "Added to Local Files"
-msgstr "Добавлено в локальные файлы"
-
-msgctxt "ResourceDownload::ResourcePage"
 msgid "Install an incompatible version?"
 msgstr "Установить несовместимую версию?"
 
@@ -126,9 +126,133 @@ msgctxt "ResourcePage"
 msgid "Save to Local Files"
 msgstr "Сохранить в локальные файлы"
 
+msgctxt "SaveTemplateDialog"
+msgid "Files taken from your local files folder:"
+msgstr "Файлы из папки локальных файлов:"
+
+msgctxt "SaveTemplateDialog"
+msgid "Include files taken from your local files folder"
+msgstr "Включить файлы из папки локальных файлов"
+
+msgctxt "SaveTemplateDialog"
+msgid "Instance:"
+msgstr "Инстанс:"
+
+msgctxt "SaveTemplateDialog"
+msgid "Minecraft %1"
+msgstr "Minecraft %1"
+
+msgctxt "SaveTemplateDialog"
+msgid "Name:"
+msgstr "Имя:"
+
+msgctxt "SaveTemplateDialog"
+msgid "Remember the instance settings you changed"
+msgstr "Запомнить изменённые настройки инстанса"
+
+msgctxt "SaveTemplateDialog"
+msgid "Save as Template"
+msgstr "Сохранить как шаблон"
+
+msgctxt "SaveTemplateDialog"
+msgid "The instance settings you changed are remembered."
+msgstr "Изменённые настройки инстанса будут запомнены."
+
+msgctxt "SaveTemplateDialog"
+msgid "There are no instances to save a template from yet."
+msgstr "Пока нет инстансов, из которых можно сохранить шаблон."
+
+msgctxt "SaveTemplateDialog"
+msgid "Unknown Minecraft version"
+msgstr "Неизвестная версия Minecraft"
+
 msgctxt "ShaderPackPage"
 msgid "Get shader packs from your local files folder or from online mod platforms"
 msgstr "Взять шейдерпаки из папки локальных файлов или с онлайн-платформ"
+
+msgctxt "TemplateCreationTask"
+msgid "Copying template files... (%1/%2)"
+msgstr "Копирование файлов шаблона... (%1/%2)"
+
+msgctxt "TemplateCreationTask"
+msgid "Creating instance from template \"%1\""
+msgstr "Создание инстанса из шаблона «%1»"
+
+msgctxt "TemplatePage"
+msgid "Could not read the templates file: %1"
+msgstr "Не удалось прочитать файл шаблонов: %1"
+
+msgctxt "TemplatePage"
+msgid "Delete"
+msgstr "Удалить"
+
+msgctxt "TemplatePage"
+msgid "Delete template"
+msgstr "Удалить шаблон"
+
+msgctxt "TemplatePage"
+msgid "Delete the template \"%1\"? This cannot be undone."
+msgstr "Удалить шаблон «%1»? Это действие необратимо."
+
+msgctxt "TemplatePage"
+msgid "Files taken from your local files folder:"
+msgstr "Файлы из папки локальных файлов:"
+
+msgctxt "TemplatePage"
+msgid "It also remembers the instance settings you changed."
+msgstr "Также запоминает изменённые настройки инстанса."
+
+msgctxt "TemplatePage"
+msgid "It follows your global settings."
+msgstr "Использует глобальные настройки."
+
+msgctxt "TemplatePage"
+msgid "Minecraft %1"
+msgstr "Minecraft %1"
+
+msgctxt "TemplatePage"
+msgid "No files are taken from your local files folder."
+msgstr "Файлы из папки локальных файлов не используются."
+
+msgctxt "TemplatePage"
+msgid "Refresh"
+msgstr "Обновить"
+
+msgctxt "TemplatePage"
+msgid "Rename"
+msgstr "Переименовать"
+
+msgctxt "TemplatePage"
+msgid "Rename template"
+msgstr "Переименовать шаблон"
+
+msgctxt "TemplatePage"
+msgid "Save from an instance..."
+msgstr "Сохранить из инстанса..."
+
+msgctxt "TemplatePage"
+msgid "Select a template to see what it will create."
+msgstr "Выберите шаблон, чтобы увидеть, что он создаст."
+
+msgctxt "TemplatePage"
+msgid "Start from a recipe you saved earlier: the game version and mod loader, the instance settings you changed, and files taken from your local files folder."
+msgstr "Начните с сохранённого рецепта: версия игры и загрузчик модов, изменённые настройки инстанса и файлы из папки локальных файлов."
+
+msgctxt "TemplatePage"
+msgid "Template name:"
+msgstr "Имя шаблона:"
+
+msgctxt "TemplatePage"
+msgid "Templates"
+msgstr "Шаблоны"
+
+msgctxt "TemplatePage"
+msgid "The files it used are no longer in your local files folder."
+msgstr "Использованные им файлы больше не в папке локальных файлов."
+
+msgctxt "TemplatePage"
+msgid "Unknown Minecraft version"
+msgstr "Неизвестная версия Minecraft"
 
 msgctxt "TexturePackPage"
 msgid "Get texture packs from your local files folder or from online mod platforms"

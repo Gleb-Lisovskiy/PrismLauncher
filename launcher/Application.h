@@ -76,6 +76,7 @@ class MCEditTool;
 class ThemeManager;
 class IconTheme;
 class BaseInstance;
+class InstanceTemplateStore;
 
 class LogModel;
 
@@ -126,6 +127,12 @@ class Application : public QApplication {
      *  the launcher's other data. Created lazily so that a headless or library-only run does not
      *  touch the disk for it. */
     LibraryIndex* library() const;
+
+    /** The user's saved instance templates, created on first use.
+     *
+     *  Kept in a small JSON document next to the launcher's other data. Created lazily so that a
+     *  headless run does not touch the disk for it. */
+    InstanceTemplateStore* templates() const;
 
     qint64 timeSinceStart() const { return m_startTime.msecsTo(QDateTime::currentDateTime()); }
 
@@ -265,6 +272,7 @@ class Application : public QApplication {
     std::unique_ptr<Meta::Index> m_metadataIndex;
 
     mutable std::unique_ptr<LibraryIndex> m_library;
+    mutable std::unique_ptr<InstanceTemplateStore> m_templates;
 
     std::unique_ptr<SettingsObject> m_settings;
     std::unique_ptr<InstanceList> m_instances;

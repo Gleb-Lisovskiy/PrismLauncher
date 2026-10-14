@@ -55,11 +55,6 @@ RU = {
     "instance later without downloading it again.":
         "Скачать эту версию в папку локальных файлов, чтобы потом ставить её в любой инстанс без "
         "повторной загрузки.",
-    "Added to Local Files": "Добавлено в локальные файлы",
-    "'%1' is now in your local files. It appears under the 'Local Files' tab whenever you install "
-    "mods, resource packs or shader packs into an instance.":
-        "«%1» теперь в локальных файлах. Он появится на вкладке «Локальные файлы», когда вы "
-        "ставите моды, ресурспаки или шейдерпаки в инстанс.",
     "Install an incompatible version?": "Установить несовместимую версию?",
     "'%1' does not allow downloads from third-party launchers and no project page is known.":
         "«%1» не разрешает загрузку сторонними лаунчерами, и страница проекта неизвестна.",
@@ -82,6 +77,59 @@ RU = {
     "Copying %1": "Копирование: %1",
     "Could not read %1: %2": "Не удалось прочитать %1: %2",
     "Could not write %1: %2": "Не удалось записать %1: %2",
+
+    # --- instance templates ---
+    "Templates": "Шаблоны",
+    "Save from an instance...": "Сохранить из инстанса...",
+    "Start from a recipe you saved earlier: the game version and mod loader, the instance settings "
+    "you changed, and files taken from your local files folder.":
+        "Начните с сохранённого рецепта: версия игры и загрузчик модов, изменённые настройки "
+        "инстанса и файлы из папки локальных файлов.",
+    "Select a template to see what it will create.":
+        "Выберите шаблон, чтобы увидеть, что он создаст.",
+    "No files are taken from your local files folder.":
+        "Файлы из папки локальных файлов не используются.",
+    "The files it used are no longer in your local files folder.":
+        "Использованные им файлы больше не в папке локальных файлов.",
+    "It follows your global settings.": "Использует глобальные настройки.",
+    "It also remembers the instance settings you changed.":
+        "Также запоминает изменённые настройки инстанса.",
+    "Files taken from your local files folder:": "Файлы из папки локальных файлов:",
+    "Minecraft %1": "Minecraft %1",
+    "Unknown Minecraft version": "Неизвестная версия Minecraft",
+    "Rename": "Переименовать",
+    "Delete": "Удалить",
+    "Refresh": "Обновить",
+    "Rename template": "Переименовать шаблон",
+    "Template name:": "Имя шаблона:",
+    "Delete template": "Удалить шаблон",
+    "Delete the template \"%1\"? This cannot be undone.":
+        "Удалить шаблон «%1»? Это действие необратимо.",
+    "Could not read the templates file: %1":
+        "Не удалось прочитать файл шаблонов: %1",
+
+    # --- saving a template from an instance ---
+    "Save as Template": "Сохранить как шаблон",
+    "Instance:": "Инстанс:",
+    "Name:": "Имя:",
+    "Remember the instance settings you changed":
+        "Запомнить изменённые настройки инстанса",
+    "Include files taken from your local files folder":
+        "Включить файлы из папки локальных файлов",
+    "The instance settings you changed are remembered.":
+        "Изменённые настройки инстанса будут запомнены.",
+    "There are no instances to save a template from yet.":
+        "Пока нет инстансов, из которых можно сохранить шаблон.",
+
+    # --- creating an instance from a template ---
+    "Creating instance from template \"%1\"": "Создание инстанса из шаблона «%1»",
+    "Copying template files... (%1/%2)": "Копирование файлов шаблона... (%1/%2)",
+
+    # --- the templates file ---
+    "Could not create the folder for the templates file.":
+        "Не удалось создать папку для файла шаблонов.",
+    "The templates file is not a JSON object.":
+        "Файл шаблонов не является объектом JSON.",
 }
 
 

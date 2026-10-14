@@ -66,6 +66,12 @@ class NewInstanceDialog : public QDialog, public BasePageProvider {
     void setSuggestedIconFromFile(const QString& path, const QString& name);
     void setSuggestedIcon(const QString& key);
 
+    /** Suggests an icon by its installed key, and makes that key the one the new instance is
+     *  created with. The plain setSuggestedIcon() only changes what is shown, because for a freshly
+     *  picked icon the key is decided by the icon picker; a template, though, already knows the key
+     *  it wants and would otherwise quietly fall back to the default. */
+    void setSuggestedIconKey(const QString& key);
+
     InstanceTask* extractTask();
 
     QString dialogTitle() override;

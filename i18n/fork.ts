@@ -2,6 +2,17 @@
 <!DOCTYPE TS>
 <TS version="2.1">
 <context>
+    <name>InstanceTemplateStore</name>
+    <message>
+        <source>The templates file is not a JSON object.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Could not create the folder for the templates file.</source>
+        <translation type="unfinished"></translation>
+    </message>
+</context>
+<context>
     <name>LauncherPage</name>
     <message>
         <source>User Interface</source>
@@ -673,14 +684,6 @@ Please update %1!</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <source>Added to Local Files</source>
-        <translation type="unfinished"></translation>
-    </message>
-    <message>
-        <source>&apos;%1&apos; is now in your local files. It appears under the &apos;Local Files&apos; tab whenever you install mods, resource packs or shader packs into an instance.</source>
-        <translation type="unfinished"></translation>
-    </message>
-    <message>
         <source>No versions available</source>
         <translation type="unfinished"></translation>
     </message>
@@ -866,6 +869,49 @@ Are you sure?</source>
     </message>
 </context>
 <context>
+    <name>SaveTemplateDialog</name>
+    <message>
+        <source>Save as Template</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Instance:</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Name:</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Remember the instance settings you changed</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Include files taken from your local files folder</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>There are no instances to save a template from yet.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Unknown Minecraft version</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Minecraft %1</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Files taken from your local files folder:</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>The instance settings you changed are remembered.</source>
+        <translation type="unfinished"></translation>
+    </message>
+</context>
+<context>
     <name>ShaderPackPage</name>
     <message>
         <source>Download Packs</source>
@@ -944,6 +990,96 @@ Are you sure you want to do this?</source>
     <message>
         <source>You are about to remove the metadata for %1 shader packs.
 Are you sure?</source>
+        <translation type="unfinished"></translation>
+    </message>
+</context>
+<context>
+    <name>TemplateCreationTask</name>
+    <message>
+        <source>Creating instance from template &quot;%1&quot;</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Copying template files... (%1/%2)</source>
+        <translation type="unfinished"></translation>
+    </message>
+</context>
+<context>
+    <name>TemplatePage</name>
+    <message>
+        <source>Start from a recipe you saved earlier: the game version and mod loader, the instance settings you changed, and files taken from your local files folder.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Save from an instance...</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Rename</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Delete</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Refresh</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Select a template to see what it will create.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Unknown Minecraft version</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Minecraft %1</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>No files are taken from your local files folder.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>The files it used are no longer in your local files folder.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Files taken from your local files folder:</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>It follows your global settings.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>It also remembers the instance settings you changed.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Rename template</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Template name:</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Delete template</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Delete the template &quot;%1&quot;? This cannot be undone.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Templates</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Could not read the templates file: %1</source>
         <translation type="unfinished"></translation>
     </message>
 </context>

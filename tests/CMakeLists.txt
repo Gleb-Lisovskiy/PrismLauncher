@@ -70,6 +70,9 @@ ecm_add_test(FlameDownloadUrl_test.cpp LINK_LIBRARIES Launcher_logic Qt${QT_VERS
 ecm_add_test(LibraryIndex_test.cpp LINK_LIBRARIES Launcher_logic Qt${QT_VERSION_MAJOR}::Test
     TEST_NAME LibraryIndex)
 
+ecm_add_test(InstanceTemplate_test.cpp LINK_LIBRARIES Launcher_logic Qt${QT_VERSION_MAJOR}::Test
+    TEST_NAME InstanceTemplate)
+
 ecm_add_test(LibraryVersions_test.cpp LINK_LIBRARIES Launcher_logic Qt${QT_VERSION_MAJOR}::Test
     TEST_NAME LibraryVersions)
 

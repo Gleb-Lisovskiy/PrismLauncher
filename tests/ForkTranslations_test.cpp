@@ -43,7 +43,7 @@ class ForkTranslationsCatalog : public QObject {
             { "ModFolderPage", "Get mods from your local files folder or from online mod platforms" },
             { "ResourcePage", "Save to Local Files" },  // the .ui form, not the page class
             { "LauncherPage", "&Local Files:" },
-            { "ResourceDownload::ResourcePage", "Added to Local Files" },
+            { "ResourceDownload::ResourcePage", "'%1' does not allow downloads from third-party launchers and no project page is known." },
             { "ResourceDownload::LocalModPage", "Local Files" },
             { "ResourceDownload::LocalResourcePackPage", "Local Files" },
             { "ResourceDownload::LocalShaderPackPage", "Local Files" },

@@ -43,6 +43,7 @@
 #include "Application.h"
 #include "BuildConfig.h"
 #include "FileSystem.h"
+#include "InstanceTemplate.h"
 #include "minecraft/mod/LibraryIndex.h"
 
 #include "DataMigrationTask.h"
@@ -1290,6 +1291,17 @@ LibraryIndex* Application::library() const
         }
     }
     return m_library.get();
+}
+
+InstanceTemplateStore* Application::templates() const
+{
+    if (!m_templates) {
+        m_templates = std::make_unique<InstanceTemplateStore>(FS::PathCombine(dataRoot(), "instance_templates.json"));
+        QString error;
+        if (!m_templates->load(&error) && !error.isEmpty())
+            qWarning() << "Could not read the instance templates:" << error;
+    }
+    return m_templates.get();
 }
 
 bool Application::updaterEnabled()
