@@ -2,6 +2,7 @@
 //
 // SPDX-License-Identifier: GPL-3.0-only
 
+#include <QDir>
 #include <QJsonDocument>
 #include <QJsonObject>
 #include <QTemporaryDir>
@@ -611,6 +612,28 @@ class LibraryIndexTest : public QObject {
         QCOMPARE(LibraryIndex::typeDirName(LibraryIndex::Type::ResourcePack), QString("resourcepacks"));
         QCOMPARE(LibraryIndex::typeDirName(LibraryIndex::Type::ShaderPack), QString("shaderpacks"));
         QCOMPARE(LibraryIndex::typeDirName(LibraryIndex::Type::TexturePack), QString("texturepacks"));
+    }
+
+    /** The LocalFilesDir setting is a bare folder name by default and an absolute path once the user
+     *  browses for one; both have to end up pointing at the folder the user meant. */
+    void testSettingResolvesRelativeAndAbsolutePaths()
+    {
+        const QString base = uniqueDir();
+        const QString dataRoot = FS::PathCombine(base, "data");
+
+        // A bare name lives under the launcher's data folder.
+        QCOMPARE(LibraryIndex::resolveRootDir(dataRoot, "localfiles"), FS::PathCombine(dataRoot, "localfiles"));
+
+        // An absolute path is used as it is: joining it onto the data folder would bury the chosen
+        // folder inside it, which is what made the setting look broken.
+        const QString absolute = FS::PathCombine(base, "elsewhere", "chosen-folder");
+        const QString resolved = LibraryIndex::resolveRootDir(dataRoot, absolute);
+        QVERIFY(QDir::isAbsolutePath(resolved));
+        QCOMPARE(resolved, QDir::cleanPath(absolute));
+        QVERIFY(!resolved.startsWith(dataRoot));
+
+        // A cleared setting must not quietly turn the whole data folder into the library.
+        QCOMPARE(LibraryIndex::resolveRootDir(dataRoot, ""), FS::PathCombine(dataRoot, "localfiles"));
     }
 };
 

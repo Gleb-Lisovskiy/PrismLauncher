@@ -14,7 +14,11 @@
  *
  *  The download goes to a temporary file first and is only moved into place once it has completed,
  *  so an aborted or failed transfer cannot leave a half-written payload in the library. The notes
- *  file naming the project is written by LibraryIndex::add, after the payload itself is in place. */
+ *  file naming the project is written by LibraryIndex::add, after the payload itself is in place.
+ *
+ *  Unlike the resource downloads, which sit inside a NetJob that hands the network manager to every
+ *  action it owns, this task drives a single Net::Download itself and so has to give it the
+ *  launcher's network manager before starting it. */
 class LibraryDownloadTask : public Task {
     Q_OBJECT
 

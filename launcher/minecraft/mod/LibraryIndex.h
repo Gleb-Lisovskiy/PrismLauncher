@@ -90,6 +90,15 @@ class LibraryIndex {
 
     explicit LibraryIndex(QString rootDir);
 
+    /** Turns the LocalFilesDir setting into an absolute path.
+     *
+     *  A bare name is relative to the launcher's data folder, which is where the default "localfiles"
+     *  lives. An absolute path is used as it is, which is what browsing for a folder produces;
+     *  combining the two, as a naive join would, silently nests the chosen folder inside the data
+     *  folder and makes the setting look like it did nothing. An empty value falls back to the
+     *  default rather than scanning the data folder itself. */
+    static QString resolveRootDir(const QString& dataRoot, const QString& configured);
+
     /** Root directory of the library. */
     [[nodiscard]] QString rootDir() const { return m_root; }
 

@@ -173,6 +173,14 @@ QString renderNotes(const LibraryIndex::Entry& entry, const QString& markdown)
 
 LibraryIndex::LibraryIndex(QString rootDir) : m_root(std::move(rootDir)) {}
 
+QString LibraryIndex::resolveRootDir(const QString& dataRoot, const QString& configured)
+{
+    const QString value = configured.isEmpty() ? QStringLiteral("localfiles") : configured;
+    if (QDir::isAbsolutePath(value))
+        return QDir::cleanPath(value);
+    return FS::PathCombine(dataRoot, value);
+}
+
 QString LibraryIndex::typeDirName(Type type)
 {
     switch (type) {

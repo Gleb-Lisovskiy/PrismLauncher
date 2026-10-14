@@ -4,6 +4,7 @@
 
 #include "LibraryDownloadTask.h"
 
+#include <QDir>
 #include <QFile>
 #include <QFileInfo>
 #include <QTemporaryDir>
@@ -50,6 +51,9 @@ void LibraryDownloadTask::executeTask()
     setProgress(0, 100);
 
     m_download = Net::Download::makeFile(m_url, m_tempPath);
+    // NetJob hands the network manager to each action it owns; this task drives a single Download on
+    // its own, so it has to do the same before starting it or the request goes nowhere.
+    m_download->setNetwork(APPLICATION->network());
     connect(m_download.get(), &Task::succeeded, this, &LibraryDownloadTask::onSucceeded);
     connect(m_download.get(), &Task::failed, this, &LibraryDownloadTask::onFailed);
 

@@ -1279,7 +1279,7 @@ LibraryIndex* Application::library() const
     // The folder is a setting, so it can change while the launcher is running. Rebuilding the index
     // when it does keeps the two in step; a scan of a folder that has not changed costs a directory
     // listing and no more.
-    const QString path = FS::PathCombine(dataRoot(), settings()->get("LocalFilesDir").toString());
+    const QString path = LibraryIndex::resolveRootDir(dataRoot(), settings()->get("LocalFilesDir").toString());
     if (!m_library || m_library->rootDir() != path) {
         m_library = std::make_unique<LibraryIndex>(path);
         // A folder that cannot be read must not stop the launcher from starting; the library opens

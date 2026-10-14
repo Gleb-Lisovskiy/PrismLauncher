@@ -186,12 +186,14 @@ void LauncherPage::on_skinsDirBrowseBtn_clicked()
 
 void LauncherPage::on_localFilesDirBrowseBtn_clicked()
 {
-    QString raw_dir = QFileDialog::getExistingDirectory(this, tr("Local Files Folder"), ui->localFilesDirTextBox->text());
+    // The text box holds a setting value, which is a bare folder name by default, not a path that
+    // can be opened; ask the library where it actually lives. The chosen folder is stored as an
+    // absolute path so it cannot end up resolved relative to something else later.
+    const QString current = APPLICATION->library()->rootDir();
+    QString raw_dir = QFileDialog::getExistingDirectory(this, tr("Local Files Folder"), current);
 
-    // do not allow current dir - it's dirty. Do not allow dirs that don't exist
     if (!raw_dir.isEmpty() && QDir(raw_dir).exists()) {
-        QString cooked_dir = FS::NormalizePath(raw_dir);
-        ui->localFilesDirTextBox->setText(cooked_dir);
+        ui->localFilesDirTextBox->setText(QDir::cleanPath(QDir(raw_dir).absolutePath()));
     }
 }
 
