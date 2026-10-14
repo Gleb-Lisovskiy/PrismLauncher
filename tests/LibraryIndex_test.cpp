@@ -2,10 +2,11 @@
 //
 // SPDX-License-Identifier: GPL-3.0-only
 
-#include <QTest>
 #include <QTemporaryDir>
+#include <QTest>
 
 #include "FileSystem.h"
+#include "archive/ArchiveWriter.h"
 #include "minecraft/mod/LibraryIndex.h"
 
 class LibraryIndexTest : public QObject {
@@ -34,10 +35,39 @@ class LibraryIndexTest : public QObject {
         return path;
     }
 
+    /** Writes a minimal Fabric mod jar, which is as close to a real one as a test needs.
+     *
+     *  Returns an empty string on failure. The metadata lives in fabric.mod.json, exactly where a
+     *  real loader would look for it. */
+    QString writeFabricMod(const QString& fileName, const QString& modId, const QString& version, const QString& name)
+    {
+        QJsonObject object;
+        object.insert("schemaVersion", 1);
+        object.insert("id", modId);
+        object.insert("version", version);
+        object.insert("name", name);
+        object.insert("description", "a mod that describes itself");
+        const auto json = QJsonDocument(object).toJson(QJsonDocument::Indented);
+
+        const QString path = FS::PathCombine(uniqueDir(), fileName);
+        QDir().mkpath(uniqueDir());
+        MMCZip::ArchiveWriter writer(path);
+        if (!writer.open()) {
+            return {};
+        }
+        if (!writer.addFile("fabric.mod.json", json)) {
+            return {};
+        }
+        if (!writer.close()) {
+            return {};
+        }
+        return path;
+    }
+
     static LibraryIndex::Entry makeEntry(const QString& modId,
-                                        const QString& name,
-                                        LibraryIndex::Type type = LibraryIndex::Type::Mod,
-                                        const QString& version = "1.0.0")
+                                         const QString& name,
+                                         LibraryIndex::Type type = LibraryIndex::Type::Mod,
+                                         const QString& version = "1.0.0")
     {
         LibraryIndex::Entry entry;
         entry.type = type;
@@ -174,18 +204,18 @@ class LibraryIndexTest : public QObject {
         const auto otherVersion = makeEntry("thing", "Thing", LibraryIndex::Type::Mod, "2.0.0");
         const auto noVersion = makeEntry("thing", "Thing", LibraryIndex::Type::Mod, "");
 
-        QVERIFY(LibraryIndex::makeId(LibraryIndex::Type::Mod, one.details, "a.jar")
-                != LibraryIndex::makeId(LibraryIndex::Type::ShaderPack, otherType.details, "a.jar"));
-        QVERIFY(LibraryIndex::makeId(LibraryIndex::Type::Mod, one.details, "a.jar")
-                != LibraryIndex::makeId(LibraryIndex::Type::Mod, otherMod.details, "a.jar"));
-        QVERIFY(LibraryIndex::makeId(LibraryIndex::Type::Mod, one.details, "a.jar")
-                != LibraryIndex::makeId(LibraryIndex::Type::Mod, otherVersion.details, "a.jar"));
+        QVERIFY(LibraryIndex::makeId(LibraryIndex::Type::Mod, one.details, "a.jar") !=
+                LibraryIndex::makeId(LibraryIndex::Type::ShaderPack, otherType.details, "a.jar"));
+        QVERIFY(LibraryIndex::makeId(LibraryIndex::Type::Mod, one.details, "a.jar") !=
+                LibraryIndex::makeId(LibraryIndex::Type::Mod, otherMod.details, "a.jar"));
+        QVERIFY(LibraryIndex::makeId(LibraryIndex::Type::Mod, one.details, "a.jar") !=
+                LibraryIndex::makeId(LibraryIndex::Type::Mod, otherVersion.details, "a.jar"));
         // With a mod id the file name does not matter.
         QCOMPARE(LibraryIndex::makeId(LibraryIndex::Type::Mod, one.details, "a.jar"),
                  LibraryIndex::makeId(LibraryIndex::Type::Mod, one.details, "b.jar"));
         // Without a mod id the file name carries the identity.
-        QVERIFY(LibraryIndex::makeId(LibraryIndex::Type::Mod, ModDetails(), "a.jar")
-                != LibraryIndex::makeId(LibraryIndex::Type::Mod, ModDetails(), "b.jar"));
+        QVERIFY(LibraryIndex::makeId(LibraryIndex::Type::Mod, ModDetails(), "a.jar") !=
+                LibraryIndex::makeId(LibraryIndex::Type::Mod, ModDetails(), "b.jar"));
         QVERIFY(!LibraryIndex::makeId(LibraryIndex::Type::Mod, noVersion.details, "a.jar").isEmpty());
     }
 
@@ -227,7 +257,7 @@ class LibraryIndexTest : public QObject {
         {
             LibraryIndex lib(root);
             auto entry = makeEntry("thing", "Thing");
-        QVERIFY2(lib.add(entry, writeSource("thing.jar", "payload"), &error), qPrintable(error));
+            QVERIFY2(lib.add(entry, writeSource("thing.jar", "payload"), &error), qPrintable(error));
         }
 
         LibraryIndex probe(root);
@@ -384,6 +414,120 @@ class LibraryIndexTest : public QObject {
             QVERIFY(entry);
             QCOMPARE(entry->type, type);
         }
+    }
+
+    void testReadsModMetadataFromTheJarItself()
+    {
+        // A jar dropped straight into the library has no manifest entry, so everything the entry
+        // says about the mod has to come out of the file.
+        LibraryIndex lib(libraryDir());
+        QVERIFY(lib.load());
+
+        const QString modsDir = FS::PathCombine(lib.rootDir(), LibraryIndex::typeDirName(LibraryIndex::Type::Mod));
+        QVERIFY(QDir().mkpath(modsDir));
+        const QString jar = writeFabricMod("some-random-build-1.jar", "examplemod", "4.2.0", "Example Mod");
+        QVERIFY(!jar.isEmpty());
+        QVERIFY(QFile::copy(jar, FS::PathCombine(modsDir, "some-random-build-1.jar")));
+
+        LibraryIndex reopened(lib.rootDir());
+        QVERIFY(reopened.load());
+        QCOMPARE(reopened.size(), 1);
+
+        const auto& entry = reopened.entries().first();
+        QCOMPARE(entry.details.mod_id, QString("examplemod"));
+        QCOMPARE(entry.details.version, QString("4.2.0"));
+        QCOMPARE(entry.details.name, QString("Example Mod"));
+        QCOMPARE(entry.details.description, QString("a mod that describes itself"));
+
+        // The id is derived from the mod id, so renaming the file does not change the identity.
+        QCOMPARE(entry.id, LibraryIndex::makeId(LibraryIndex::Type::Mod, entry.details, "anything-else.jar"));
+    }
+
+    void testUnreadableModKeepsTheFileNameAsItsName()
+    {
+        LibraryIndex lib(libraryDir());
+        QVERIFY(lib.load());
+
+        const QString modsDir = FS::PathCombine(lib.rootDir(), LibraryIndex::typeDirName(LibraryIndex::Type::Mod));
+        QVERIFY(QDir().mkpath(modsDir));
+        // Not a zip at all, so there is nothing to read metadata from.
+        QFile junk(FS::PathCombine(modsDir, "broken-mod.jar"));
+        QVERIFY(junk.open(QIODevice::WriteOnly));
+        junk.write("this is not a jar");
+        junk.close();
+
+        LibraryIndex reopened(lib.rootDir());
+        QVERIFY(reopened.load());
+        QCOMPARE(reopened.size(), 1);
+        QCOMPARE(reopened.entries().first().details.name, QString("broken-mod"));
+        QVERIFY(reopened.entries().first().details.mod_id.isEmpty());
+    }
+
+    void testAddReadsModMetadataWhenTheCallerSuppliesNone()
+    {
+        LibraryIndex lib(libraryDir());
+        const QString src = writeFabricMod("examplemod-4.2.0.jar", "examplemod", "4.2.0", "Example Mod");
+        QVERIFY(!src.isEmpty());
+
+        // The usual path when a user drops a file in: no description at all.
+        LibraryIndex::Entry entry;
+        entry.type = LibraryIndex::Type::Mod;
+
+        QString error;
+        QVERIFY2(lib.add(entry, src, &error), qPrintable(error));
+        QCOMPARE(entry.details.mod_id, QString("examplemod"));
+        QCOMPARE(entry.details.version, QString("4.2.0"));
+        QCOMPARE(entry.details.name, QString("Example Mod"));
+    }
+
+    void testAddKeepsMetadataTheCallerSupplied()
+    {
+        LibraryIndex lib(libraryDir());
+        const QString src = writeFabricMod("examplemod-4.2.0.jar", "examplemod", "4.2.0", "Example Mod");
+        QVERIFY(!src.isEmpty());
+
+        // A file that came from a platform carries what the platform said, which is what the user
+        // will recognise. The jar's own metadata must not overwrite it.
+        auto entry = makeEntry("examplemod", "Example Mod", LibraryIndex::Type::Mod, "9.9.9");
+
+        QString error;
+        QVERIFY2(lib.add(entry, src, &error), qPrintable(error));
+        QCOMPARE(entry.details.version, QString("9.9.9"));
+    }
+
+    void testReadsMetadataForEntriesAnOlderManifestDescribedPoorly()
+    {
+        LibraryIndex lib(libraryDir());
+        QString error;
+
+        // An entry with nothing but a file name, which is what an older manifest held.
+        auto entry = makeEntry("", "examplemod-4.2.0.jar", LibraryIndex::Type::Mod, "");
+        const QString src = writeFabricMod("examplemod-4.2.0.jar", "examplemod", "4.2.0", "Example Mod");
+        QVERIFY(!src.isEmpty());
+        QVERIFY2(lib.add(entry, src, &error), qPrintable(error));
+
+        // Reopen, having meanwhile emptied the description the way the old code left it.
+        auto stale = lib.entries().first();
+        stale.details = ModDetails();
+        stale.details.name = "examplemod-4.2.0";
+        {
+            LibraryIndex rewrite(lib.rootDir());
+            QVERIFY(rewrite.load());
+            stale.id = rewrite.entries().first().id;
+            QVERIFY2(rewrite.update(stale, &error), qPrintable(error));
+        }
+
+        LibraryIndex reopened(lib.rootDir());
+        QVERIFY(reopened.load());
+        QCOMPARE(reopened.size(), 1);
+        QCOMPARE(reopened.entries().first().details.mod_id, QString("examplemod"));
+        QCOMPARE(reopened.entries().first().details.version, QString("4.2.0"));
+        QCOMPARE(reopened.entries().first().details.name, QString("Example Mod"));
+
+        // And the repaired description is written back, so it is only read from the jar once.
+        LibraryIndex again(lib.rootDir());
+        QVERIFY(again.load());
+        QCOMPARE(again.entries().first().details.mod_id, QString("examplemod"));
     }
 
     void testAddRejectsMissingSource()

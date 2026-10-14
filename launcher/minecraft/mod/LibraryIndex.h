@@ -121,6 +121,12 @@ class LibraryIndex {
     /** Picks up files that were placed in a type directory without going through add(). */
     [[nodiscard]] bool discoverUnlistedFiles();
 
+    /** Fills in details that an entry is missing by re-reading its payload.
+     *
+     *  Entries written before the library learned to read mod metadata carry nothing but a file
+     *  name, so this repairs them in place instead of waiting for the user to re-add the file. */
+    [[nodiscard]] bool backfillDetails();
+
     [[nodiscard]] static QJsonObject toJson(const Entry& entry);
     [[nodiscard]] static Entry fromJson(const QJsonObject& obj);
 

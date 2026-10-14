@@ -14,6 +14,24 @@
 #include <QSaveFile>
 
 #include "FileSystem.h"
+#include "minecraft/mod/Mod.h"
+#include "minecraft/mod/tasks/LocalModParseTask.h"
+
+/** Reads a mod's own metadata out of the jar: name, mod id, version and description.
+ *
+ *  A file dropped into the library by hand has none of this until something opens it, and the file
+ *  name is a poor stand-in for any of it. Returns false when the file is not a mod we can read, or
+ *  carries no metadata we understand; the caller then falls back to the file name. */
+bool readModDetails(const QFileInfo& file, ModDetails& details)
+{
+    Mod mod{ file };
+    if (!ModUtils::process(mod, ModUtils::ProcessingLevel::BasicInfoOnly) || !mod.valid()) {
+        return false;
+    }
+
+    details = mod.details();
+    return true;
+}
 
 namespace {
 constexpr int kManifestVersion = 1;
@@ -191,10 +209,10 @@ bool LibraryIndex::load(QString* error)
         // No manifest yet, but the type directories may still hold files the user put there by
         // hand, so discovery has to run in this branch too. Returning early here is what made a
         // library with files in it look permanently empty.
-        if (discoverUnlistedFiles()) {
+        flagMissingFiles();
+        if (discoverUnlistedFiles() || backfillDetails()) {
             save();
         }
-        flagMissingFiles();
         return true;
     }
 
@@ -224,12 +242,12 @@ bool LibraryIndex::load(QString* error)
         m_entries.append(std::move(entry));
     }
 
-    if (discoverUnlistedFiles()) {
+    flagMissingFiles();
+
+    if (discoverUnlistedFiles() || backfillDetails()) {
         // Record what was found so the next load does not have to guess again.
         save();
     }
-
-    flagMissingFiles();
     return true;
 }
 
@@ -263,8 +281,14 @@ bool LibraryIndex::discoverUnlistedFiles()
             Entry entry;
             entry.type = type;
             entry.file = relative;
-            entry.details.name = info.completeBaseName();
             entry.addedAt = QDateTime::currentDateTime();
+
+            // Take whatever the file itself says about itself; the name is the only fallback.
+            if (!readModDetails(info, entry.details) || entry.details.name.isEmpty()) {
+                entry.details.name = info.completeBaseName();
+            }
+
+            // The id is derived after the metadata is known, because for mods it is the mod id.
             entry.id = makeId(type, entry.details, info.fileName());
             if (find(entry.id)) {
                 continue;  // Same identity as an entry already in the manifest.
@@ -355,8 +379,21 @@ bool LibraryIndex::importPayload(Type type, const QString& sourceFilePath, QStri
 bool LibraryIndex::add(Entry& entry, const QString& sourceFilePath, QString* error)
 {
     Entry updated = entry;
-    updated.id = updated.id.isEmpty() ? makeId(updated.type, updated.details, QFileInfo(sourceFilePath).fileName())
-                                      : updated.id;
+
+    // A file added by hand arrives with no description at all. Reading it here means the id is
+    // derived from the real mod id rather than from the file name, and the library shows the same
+    // name and version the loader will show.
+    if (updated.details.mod_id.isEmpty() && updated.details.version.isEmpty()) {
+        ModDetails parsed;
+        if (readModDetails(QFileInfo(sourceFilePath), parsed)) {
+            updated.details = parsed;
+        }
+    }
+    if (updated.details.name.isEmpty()) {
+        updated.details.name = QFileInfo(sourceFilePath).completeBaseName();
+    }
+
+    updated.id = updated.id.isEmpty() ? makeId(updated.type, updated.details, QFileInfo(sourceFilePath).fileName()) : updated.id;
     if (!updated.addedAt.isValid()) {
         updated.addedAt = QDateTime::currentDateTime();
     }
@@ -449,4 +486,30 @@ const LibraryIndex::Entry* LibraryIndex::find(const QString& id) const
 {
     const auto it = std::find_if(m_entries.cbegin(), m_entries.cend(), [&id](const Entry& e) { return e.id == id; });
     return it == m_entries.cend() ? nullptr : &*it;
+}
+
+bool LibraryIndex::backfillDetails()
+{
+    bool changed = false;
+
+    for (auto& entry : m_entries) {
+        // Only mods carry metadata the launcher can read back out of the file; a resource pack or a
+        // shader pack says nothing useful beyond its file name.
+        if (entry.type != Type::Mod || entry.broken) {
+            continue;
+        }
+        if (!entry.details.mod_id.isEmpty() || !entry.details.version.isEmpty()) {
+            continue;  // Already described, whether by a platform or by an earlier run.
+        }
+
+        ModDetails parsed;
+        if (!readModDetails(QFileInfo(absoluteFilePath(entry)), parsed) || parsed.name.isEmpty()) {
+            continue;  // Not a mod we can read; the file name stays.
+        }
+
+        entry.details = parsed;
+        changed = true;
+    }
+
+    return changed;
 }

@@ -103,6 +103,10 @@ void doInstall(QWidget* parent,
 LocalModPage::LocalModPage(ModDownloadDialog* dialog, BaseInstance& instance, LibraryIndex* library)
     : ModPage(dialog, instance), m_library(library)
 {
+    // The base class never wires this up; each provider page does it in its own constructor.
+    // Without it the "Select ... for download" button does nothing.
+    connect(m_ui->resourceSelectionButton, &QPushButton::clicked, this, &LocalModPage::onResourceSelected);
+
     m_model = new ModModel(instance, new LibraryAPI(library, LibraryIndex::Type::Mod), debugName(), metaEntryBase());
     m_ui->packView->setModel(m_model);
 }
@@ -138,6 +142,10 @@ void LocalModPage::addResourceToDialog(ModPlatform::IndexedPack::Ptr pack, ModPl
 LocalResourcePackPage::LocalResourcePackPage(ResourcePackDownloadDialog* dialog, BaseInstance& instance, LibraryIndex* library)
     : ResourcePackResourcePage(dialog, instance), m_library(library)
 {
+    // The base class never wires this up; each provider page does it in its own constructor.
+    // Without it the "Select ... for download" button does nothing.
+    connect(m_ui->resourceSelectionButton, &QPushButton::clicked, this, &LocalResourcePackPage::onResourceSelected);
+
     m_model =
         new ResourcePackResourceModel(instance, new LibraryAPI(library, LibraryIndex::Type::ResourcePack), debugName(), metaEntryBase());
     m_ui->packView->setModel(m_model);
@@ -164,6 +172,10 @@ void LocalResourcePackPage::addResourceToDialog(ModPlatform::IndexedPack::Ptr pa
 LocalShaderPackPage::LocalShaderPackPage(ShaderPackDownloadDialog* dialog, BaseInstance& instance, LibraryIndex* library)
     : ShaderPackResourcePage(dialog, instance), m_library(library)
 {
+    // The base class never wires this up; each provider page does it in its own constructor.
+    // Without it the "Select ... for download" button does nothing.
+    connect(m_ui->resourceSelectionButton, &QPushButton::clicked, this, &LocalShaderPackPage::onResourceSelected);
+
     m_model = new ShaderPackResourceModel(instance, new LibraryAPI(library, LibraryIndex::Type::ShaderPack), debugName(), metaEntryBase());
     m_ui->packView->setModel(m_model);
 }
