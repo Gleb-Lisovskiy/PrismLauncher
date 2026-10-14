@@ -178,9 +178,25 @@ msgctxt "LibraryModel"
 msgid "Version"
 msgstr "Версия"
 
+msgctxt "LocalResourceCopyTask"
+msgid "Copying %1"
+msgstr "Копирование: %1"
+
+msgctxt "LocalResourceCopyTask"
+msgid "Could not read %1: %2"
+msgstr "Не удалось прочитать %1: %2"
+
+msgctxt "LocalResourceCopyTask"
+msgid "Could not write %1: %2"
+msgstr "Не удалось записать %1: %2"
+
 msgctxt "ModFolderPage"
 msgid "Get mods from your local files folder or from online mod platforms"
 msgstr "Взять моды из папки локальных файлов или с онлайн-платформ"
+
+msgctxt "NoSuchContext"
+msgid "Library"
+msgstr "Библиотека"
 
 msgctxt "QObject"
 msgid "%1: %2"
@@ -209,14 +225,6 @@ msgstr "&Имя:"
 msgctxt "QObject"
 msgid "&Version:"
 msgstr "&Версия:"
-
-msgctxt "QObject"
-msgid "Could Not Install"
-msgstr "Не удалось установить"
-
-msgctxt "QObject"
-msgid "Could not copy %1 into the instance."
-msgstr "Не удалось скопировать %1 в инстанс."
 
 msgctxt "QObject"
 msgid "Could not copy %1 into the library"
@@ -257,14 +265,6 @@ msgstr "Шейдерпак"
 msgctxt "QObject"
 msgid "Texture pack"
 msgstr "Текстурпак"
-
-msgctxt "QObject"
-msgid "The file is missing from the library: %1"
-msgstr "Файл отсутствует в библиотеке: %1"
-
-msgctxt "QObject"
-msgid "This instance does not use the standard resource folders."
-msgstr "В этом инстансе нет стандартных папок ресурсов."
 
 msgctxt "ResourceDownload::LocalModPage"
 msgid "Local Files"

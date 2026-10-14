@@ -56,6 +56,9 @@ class LibraryAPI : public ResourceAPI {
     [[nodiscard]] ModPlatform::IndexedVersion toVersion(const LibraryIndex::Entry& entry) const;
 
    private:
+    /** Finds the entry a pack id refers to, by entry id or by the project it came from. */
+    [[nodiscard]] const LibraryIndex::Entry* findEntry(const QString& id) const;
+
     LibraryIndex* m_library = nullptr;
     LibraryIndex::Type m_type;
 

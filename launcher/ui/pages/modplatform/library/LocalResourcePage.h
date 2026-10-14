@@ -43,9 +43,6 @@ class LocalModPage : public ModPage {
     std::unique_ptr<ModFilterWidget> createFilterWidget() override;
     void prepareProviderCategories() override {}
 
-    /** Copies the file into the instance instead of queueing a download. */
-    void addResourceToDialog(ModPlatform::IndexedPack::Ptr pack, ModPlatform::IndexedVersion& version) override;
-
    private:
     LibraryIndex* m_library = nullptr;
 };
@@ -67,8 +64,6 @@ class LocalResourcePackPage : public ResourcePackResourcePage {
     inline auto shouldDisplay() const -> bool override { return true; }
     inline auto helpPage() const -> QString override { return {}; }
 
-    void addResourceToDialog(ModPlatform::IndexedPack::Ptr pack, ModPlatform::IndexedVersion& version) override;
-
    private:
     LibraryIndex* m_library = nullptr;
 };
@@ -88,8 +83,6 @@ class LocalShaderPackPage : public ShaderPackResourcePage {
     inline auto debugName() const -> QString override { return "Local files"; }
     inline auto shouldDisplay() const -> bool override { return true; }
     inline auto helpPage() const -> QString override { return {}; }
-
-    void addResourceToDialog(ModPlatform::IndexedPack::Ptr pack, ModPlatform::IndexedVersion& version) override;
 
    private:
     LibraryIndex* m_library = nullptr;

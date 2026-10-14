@@ -45,17 +45,10 @@ RU = {
     "Cannot Install": "Не удаётся установить",
     "Could Not Remove": "Не удалось убрать",
     "Could Not Save": "Не удалось сохранить",
-    "Could Not Install": "Не удалось установить",
     "Some Entries Were Not Installed": "Некоторые записи не установлены",
     "Installed into '%1':\n%2": "Установлено в «%1»:\n%2",
     "This instance does not use the standard mod folder layout.":
         "В этом инстансе нет стандартной папки модов.",
-    "This instance does not use the standard resource folders.":
-        "В этом инстансе нет стандартных папок ресурсов.",
-    "The file is missing from the library: %1":
-        "Файл отсутствует в библиотеке: %1",
-    "Could not copy %1 into the instance.":
-        "Не удалось скопировать %1 в инстанс.",
     "File is missing": "Файл отсутствует",
 
     # --- library index errors ---
@@ -118,6 +111,10 @@ RU = {
     "Install an incompatible version?": "Установить несовместимую версию?",
     "'%1' does not allow downloads from third-party launchers and no project page is known.":
         "«%1» не разрешает загрузку сторонними лаунчерами, и страница проекта неизвестна.",
+    # --- copying a library file into an instance ---
+    "Copying %1": "Копирование: %1",
+    "Could not read %1: %2": "Не удалось прочитать %1: %2",
+    "Could not write %1: %2": "Не удалось записать %1: %2",
 }
 
 

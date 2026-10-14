@@ -78,6 +78,12 @@
         <source>Edit Description...</source>
         <translation type="unfinished"></translation>
     </message>
+    <message numerus="yes">
+        <source>a string nobody wrote</source>
+        <translation type="unfinished">
+            <numerusform></numerusform>
+        </translation>
+    </message>
 </context>
 <context>
     <name>LibraryDialogForm</name>
@@ -185,6 +191,21 @@
     </message>
     <message>
         <source>Status</source>
+        <translation type="unfinished"></translation>
+    </message>
+</context>
+<context>
+    <name>LocalResourceCopyTask</name>
+    <message>
+        <source>Copying %1</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Could not read %1: %2</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Could not write %1: %2</source>
         <translation type="unfinished"></translation>
     </message>
 </context>
@@ -313,6 +334,15 @@ Are you sure?</source>
     </message>
 </context>
 <context>
+    <name>NoSuchContext</name>
+    <message numerus="yes">
+        <source>Library</source>
+        <translation type="unfinished">
+            <numerusform></numerusform>
+        </translation>
+    </message>
+</context>
+<context>
     <name>QObject</name>
     <message>
         <source>No such file: %1</source>
@@ -380,22 +410,6 @@ Are you sure?</source>
     </message>
     <message>
         <source>Local file</source>
-        <translation type="unfinished"></translation>
-    </message>
-    <message>
-        <source>This instance does not use the standard resource folders.</source>
-        <translation type="unfinished"></translation>
-    </message>
-    <message>
-        <source>The file is missing from the library: %1</source>
-        <translation type="unfinished"></translation>
-    </message>
-    <message>
-        <source>Could Not Install</source>
-        <translation type="unfinished"></translation>
-    </message>
-    <message>
-        <source>Could not copy %1 into the instance.</source>
         <translation type="unfinished"></translation>
     </message>
 </context>

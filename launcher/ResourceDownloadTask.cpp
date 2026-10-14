@@ -19,6 +19,8 @@
 
 #include "ResourceDownloadTask.h"
 
+#include "minecraft/mod/tasks/LocalResourceCopyTask.h"
+
 #include <utility>
 
 #include "Application.h"
@@ -71,11 +73,24 @@ ResourceDownloadTask::ResourceDownloadTask(ModPlatform::IndexedPack::Ptr pack,
         addTask(m_update_task);
     }
 
+    const auto destination = m_pack_model->dir().absoluteFilePath(getFilename());
+
+    if (QFileInfo::exists(m_pack_version.downloadUrl)) {
+        // Not a URL but a file already on disk: the user picked it out of their own library.
+        // Asking the network for a path fails with ProtocolUnknownError, so copy it instead. The
+        // task still goes through the queue, which is what puts it in the review box and makes
+        // cancelling actually cancel something.
+        m_copyTask = Task::Ptr(new LocalResourceCopyTask(m_pack_version.downloadUrl, destination));
+        connect(m_copyTask.get(), &Task::succeeded, this, &ResourceDownloadTask::downloadSucceeded);
+        connect(m_copyTask.get(), &Task::failed, this, &ResourceDownloadTask::downloadFailed);
+        addTask(m_copyTask);
+        return;
+    }
+
     m_filesNetJob.reset(new NetJob(tr("Resource download"), APPLICATION->network()));
     m_filesNetJob->setStatus(tr("Downloading resource:\n%1").arg(m_pack_version.downloadUrl));
 
-    auto action = Net::ApiDownload::makeFile(m_pack_version.downloadUrl, m_pack_model->dir().absoluteFilePath(getFilename()),
-                                             Net::Download::Option::NoOptions,
+    auto action = Net::ApiDownload::makeFile(m_pack_version.downloadUrl, destination, Net::Download::Option::NoOptions,
                                              createModrinthMeta(m_pack_model->instance(), std::move(downloadReason)));
     if (!m_pack_version.hash_type.isEmpty() && !m_pack_version.hash.isEmpty()) {
         switch (Hashing::algorithmFromString(m_pack_version.hash_type)) {
@@ -110,6 +125,7 @@ ResourceDownloadTask::ResourceDownloadTask(ModPlatform::IndexedPack::Ptr pack,
 void ResourceDownloadTask::downloadSucceeded()
 {
     m_filesNetJob.reset();
+    m_copyTask.reset();
     auto oldName = std::get<0>(to_delete);
     auto oldFilename = std::get<1>(to_delete);
 
@@ -137,6 +153,7 @@ void ResourceDownloadTask::downloadSucceeded()
 void ResourceDownloadTask::downloadFailed(QString reason)
 {
     m_filesNetJob.reset();
+    m_copyTask.reset();
     emitFailed(std::move(reason));
 }
 

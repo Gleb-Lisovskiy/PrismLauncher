@@ -73,6 +73,9 @@ ecm_add_test(LibraryIndex_test.cpp LINK_LIBRARIES Launcher_logic Qt${QT_VERSION_
 ecm_add_test(LibraryVersions_test.cpp LINK_LIBRARIES Launcher_logic Qt${QT_VERSION_MAJOR}::Test
     TEST_NAME LibraryVersions)
 
+ecm_add_test(LocalResourceCopy_test.cpp LINK_LIBRARIES Launcher_logic Qt${QT_VERSION_MAJOR}::Test
+    TEST_NAME LocalResourceCopy)
+
 ecm_add_test(ForkTranslations_test.cpp LINK_LIBRARIES Launcher_logic Qt${QT_VERSION_MAJOR}::Test
     TEST_NAME ForkTranslationsCatalog)
 foreach(catalog ${Launcher_Fork_Translations})

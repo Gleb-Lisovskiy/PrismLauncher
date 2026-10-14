@@ -25,6 +25,7 @@
 #include "minecraft/mod/tasks/LocalResourceUpdateTask.h"
 #include "modplatform/ModIndex.h"
 
+class LocalResourceCopyTask;
 class ResourceFolderModel;
 
 class ResourceDownloadTask : public SequentialTask {
@@ -48,6 +49,7 @@ class ResourceDownloadTask : public SequentialTask {
     ResourceFolderModel* m_pack_model;
 
     NetJob::Ptr m_filesNetJob;
+    Task::Ptr m_copyTask;
     LocalResourceUpdateTask::Ptr m_update_task;
 
     void downloadProgressChanged(qint64 current, qint64 total);

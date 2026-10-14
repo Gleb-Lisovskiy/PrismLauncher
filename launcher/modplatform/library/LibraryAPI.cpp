@@ -30,15 +30,44 @@ LibraryAPI::LibraryAPI(LibraryIndex* library, LibraryIndex::Type type, QString g
     : m_library(library), m_type(type), m_gameVersion(std::move(gameVersion))
 {}
 
+/** Finds the entry a pack id refers to.
+ *
+ *  A pack is identified by its project's id where the entry knows one, so that the metadata written
+ *  into the instance matches what the platforms use. Entries that came from a file on disk are only
+ *  reachable by their own id. */
+const LibraryIndex::Entry* LibraryAPI::findEntry(const QString& id) const
+{
+    if (!m_library) {
+        return nullptr;
+    }
+
+    if (const auto* entry = m_library->find(id); entry) {
+        return entry;
+    }
+
+    for (const auto& entry : m_library->entries()) {
+        if (entry.type == m_type && entry.projectId == id) {
+            return &entry;
+        }
+    }
+    return nullptr;
+}
+
 ModPlatform::IndexedPack::Ptr LibraryAPI::toPack(const LibraryIndex::Entry& entry) const
 {
     auto pack = std::make_shared<ModPlatform::IndexedPack>();
-    pack->addonId = entry.id;
+
+    // The installed mod records this as its project_id, and that is what an update check compares
+    // against. Using the library entry's own id would make a file that came from CurseForge look
+    // like a project the server has never heard of, and no update would ever be offered for it.
+    pack->addonId = entry.projectId.isEmpty() ? entry.id : entry.projectId;
     // There is no provider to point metadata at; the entry keeps its own source separately, which
     // is what the install path uses.
     pack->provider = ModPlatform::ResourceProvider::FLAME;
     pack->name = entry.details.name.isEmpty() ? QFileInfo(entry.file).fileName() : entry.details.name;
-    pack->slug = entry.details.mod_id;
+    // The slug names the packwiz index entry. The mod id is what makes it recognisable; the entry
+    // id is the fallback for a file that declares no mod id at all.
+    pack->slug = entry.details.mod_id.isEmpty() ? entry.id : entry.details.mod_id;
     pack->description = entry.details.description;
     pack->websiteUrl = entry.details.homeurl;
     pack->versionsLoaded = true;
@@ -55,7 +84,7 @@ ModPlatform::IndexedPack::Ptr LibraryAPI::toPack(const LibraryIndex::Entry& entr
 ModPlatform::IndexedVersion LibraryAPI::toVersion(const LibraryIndex::Entry& entry) const
 {
     ModPlatform::IndexedVersion version;
-    version.addonId = entry.id;
+    version.addonId = entry.projectId.isEmpty() ? entry.id : entry.projectId;
     version.fileId = entry.fileId.isEmpty() ? entry.id : entry.fileId;
     version.version = entry.details.version.isEmpty() ? QFileInfo(entry.file).fileName() : entry.details.version;
     version.version_number = version.version;
@@ -123,7 +152,7 @@ Task::Ptr LibraryAPI::getProjectVersions(VersionSearchArgs&& args, Callback<QVec
     QVector<ModPlatform::IndexedVersion> versions;
 
     if (m_library && args.pack) {
-        if (const auto* entry = m_library->find(args.pack->addonId.toString())) {
+        if (const auto* entry = findEntry(args.pack->addonId.toString())) {
             if (entry->type == m_type && !entry->broken) {
                 versions.append(toVersion(*entry));
             }
@@ -137,7 +166,7 @@ Task::Ptr LibraryAPI::getProjectVersions(VersionSearchArgs&& args, Callback<QVec
 Task::Ptr LibraryAPI::getProjectInfo(ProjectInfoArgs&& args, Callback<ModPlatform::IndexedPack::Ptr>&& callbacks, bool) const
 {
     if (m_library && args.pack) {
-        if (const auto* entry = m_library->find(args.pack->addonId.toString())) {
+        if (const auto* entry = findEntry(args.pack->addonId.toString())) {
             auto pack = toPack(*entry);
             // Answered on the next event loop turn rather than inline: this is called from
             // loadEntry, which runs inside the selection model's change notification, and swapping

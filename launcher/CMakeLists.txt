@@ -327,6 +327,8 @@ set(MINECRAFT_SOURCES
     minecraft/mod/LibraryIndex.cpp
     minecraft/mod/tasks/LibraryDownloadTask.h
     minecraft/mod/tasks/LibraryDownloadTask.cpp
+    minecraft/mod/tasks/LocalResourceCopyTask.cpp
+    minecraft/mod/tasks/LocalResourceCopyTask.h
     minecraft/mod/Mod.h
     minecraft/mod/Mod.cpp
     minecraft/mod/ModDetails.h
