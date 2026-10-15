@@ -66,6 +66,7 @@ ModRecord ModConflicts::recordFrom(const Mod& mod)
     record.fileName = mod.fileinfo().fileName();
     record.dependencies = mod.dependencies();
     record.breaks = mod.details().breaks;
+    record.provides = mod.details().provides;
     record.loaders = mod.details().local_loaders;
     record.enabled = mod.enabled();
 
@@ -104,6 +105,14 @@ QList<ModProblem> ModConflicts::scan(const QList<ModRecord>& mods, const ModScan
             byId[mod.id].append(&mod);
     }
 
+    auto disabledWithId = [&byId](const QString& id) -> const ModRecord* {
+        for (const auto* mod : byId.value(id)) {
+            if (!mod->enabled)
+                return mod;
+        }
+        return nullptr;
+    };
+
     auto enabledWithId = [&byId](const QString& id) -> const ModRecord* {
         for (const auto* mod : byId.value(id)) {
             if (mod->enabled)
@@ -112,11 +121,43 @@ QList<ModProblem> ModConflicts::scan(const QList<ModRecord>& mods, const ModScan
         return nullptr;
     };
 
-    auto disabledWithId = [&byId](const QString& id) -> const ModRecord* {
-        for (const auto* mod : byId.value(id)) {
+    QHash<QString, QList<const ModRecord*>> byProvided;
+    for (const auto& mod : mods) {
+        if (!mod.enabled)
+            continue;
+        for (const auto& provided : mod.provides) {
+            if (!provided.isEmpty())
+                byProvided[provided].append(&mod);
+        }
+    }
+
+    auto enabledProviding = [&byProvided](const QString& id) -> const ModRecord* {
+        for (const auto* mod : byProvided.value(id)) {
+            if (mod->enabled)
+                return mod;
+        }
+        return nullptr;
+    };
+
+    auto disabledProviding = [&byProvided](const QString& id) -> const ModRecord* {
+        for (const auto* mod : byProvided.value(id)) {
             if (!mod->enabled)
                 return mod;
         }
+        return nullptr;
+    };
+
+    auto satisfies = [&enabledWithId, &enabledProviding](const QString& id) -> bool {
+        if (enabledWithId(id))
+            return true;
+        if (enabledProviding(id))
+            return true;
+        return false;
+    };
+
+    auto satisfiesDisabled = [&enabledWithId, &enabledProviding, &disabledWithId, &disabledProviding](const QString& id) -> const ModRecord* {
+        if (const auto* d = disabledWithId(id)) return d;
+        if (const auto* d = disabledProviding(id)) return d;
         return nullptr;
     };
 
@@ -161,7 +202,7 @@ QList<ModProblem> ModConflicts::scan(const QList<ModRecord>& mods, const ModScan
                 continue;
             seen.insert(dependency);
 
-            if (enabledWithId(dependency))
+            if (satisfies(dependency))
                 continue;  // the mod is there and switched on, which is all this can tell
 
             ModProblem problem;
@@ -170,7 +211,7 @@ QList<ModProblem> ModConflicts::scan(const QList<ModRecord>& mods, const ModScan
             problem.fileName = mod.fileName;
             problem.other = dependency;
 
-            if (const auto* disabled = disabledWithId(dependency)) {
+            if (const auto* disabled = satisfiesDisabled(dependency)) {
                 problem.kind = ModProblem::Kind::DisabledDependency;
                 problem.severity = ModProblem::Severity::Warning;
                 problem.note = disabled->fileName;

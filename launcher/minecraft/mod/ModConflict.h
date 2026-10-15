@@ -62,6 +62,8 @@ struct ModRecord {
     QStringList dependencies;
     /** Mod IDs this mod cannot be loaded beside. */
     QStringList breaks;
+    /** Mod IDs and aliases this mod stands in for. */
+    QStringList provides;
     /** The loaders the jar is built for, in lowercase. Empty when unknown, in which case nothing
      *  is assumed about it. */
     QStringList loaders;

@@ -3,6 +3,8 @@
 #include <qdcss.h>
 #include <toml++/toml.h>
 #include <QJsonArray>
+#include <QFile>
+#include <QTemporaryFile>
 #include <QJsonDocument>
 #include <QJsonObject>
 #include <QJsonValue>
@@ -230,7 +232,7 @@ ModDetails ReadMCModTOML(QByteArray contents)
     details.icon_file = logoFile;
 
     auto parseDep = [&details](toml::array* dependencies) {
-        static const QStringList ignoreModIds = { "", "forge", "neoforge", "minecraft" };
+        static const QStringList ignoreModIds = { "", "forge", "neoforge", "minecraft", "java" };
         if (!dependencies) {
             return;
         }
@@ -260,6 +262,14 @@ ModDetails ReadMCModTOML(QByteArray contents)
             }
         }
     };
+
+    if (auto providesDatum = (*modsTable)["provides"].as_array()) {
+        for (auto& prov : *providesDatum) {
+            if (auto s = prov.as_string()) {
+                details.provides.append(QString::fromStdString(s->get()));
+            }
+        }
+    }
 
     if (tomlData.contains("dependencies")) {
         auto depValue = tomlData["dependencies"];
@@ -370,9 +380,26 @@ ModDetails ReadFabricModInfo(QByteArray contents)
             if (depends.isObject()) {
                 auto obj = depends.toObject();
                 for (auto key : obj.keys()) {
-                    if (key != "fabricloader" && key != "minecraft" && !key.startsWith("fabric-")) {
+                    if (key != "fabricloader" && key != "minecraft" && key != "java" && !key.startsWith("fabric-")) {
                         details.dependencies.append(key);
                     }
+                }
+            }
+        }
+
+        if (object.contains("provides")) {
+            auto provides = object.value("provides");
+            if (provides.isArray()) {
+                for (auto val : provides.toArray()) {
+                    if (val.isString() && !val.toString().isEmpty())
+                        details.provides.append(val.toString());
+                    else if (val.isObject())
+                        details.provides.append(val.toObject().value("id").toString());
+                }
+            } else if (provides.isObject()) {
+                for (auto key : provides.toObject().keys()) {
+                    if (!key.isEmpty())
+                        details.provides.append(key);
                 }
             }
         }
@@ -384,7 +411,7 @@ ModDetails ReadFabricModInfo(QByteArray contents)
                 continue;
             }
             for (auto modId : breaks.toObject().keys()) {
-                if (modId != "fabricloader" && modId != "minecraft" && !modId.startsWith("fabric-")) {
+                if (modId != "fabricloader" && modId != "minecraft" && modId != "java" && !modId.startsWith("fabric-")) {
                     details.breaks.append(modId);
                 }
             }
@@ -492,9 +519,27 @@ ModDetails ReadQuiltModInfo(QByteArray contents)
                         } else {
                             continue;
                         }
-                        if (modId != "minecraft" && !modId.startsWith("quilt_")) {
+                        if (modId != "minecraft" && modId != "java" && !modId.startsWith("quilt_")) {
                             details.dependencies.append(modId);
                         }
+                    }
+                }
+            }
+
+            if (object.contains("provides")) {
+                auto provides = object.value("provides");
+                if (provides.isArray()) {
+                    for (auto obj : provides.toArray()) {
+                        QString modId;
+                        if (obj.isString()) {
+                            modId = obj.toString();
+                        } else if (obj.isObject()) {
+                            modId = obj.toObject().value("id").toString();
+                        } else {
+                            continue;
+                        }
+                        if (!modId.isEmpty())
+                            details.provides.append(modId);
                     }
                 }
             }
@@ -513,7 +558,7 @@ ModDetails ReadQuiltModInfo(QByteArray contents)
                         } else {
                             continue;
                         }
-                        if (!modId.isEmpty() && modId != "minecraft" && !modId.startsWith("quilt_")) {
+                        if (!modId.isEmpty() && modId != "minecraft" && modId != "java" && !modId.startsWith("quilt_")) {
                             details.breaks.append(modId);
                         }
                     }
@@ -612,6 +657,101 @@ bool process(Mod& mod, ProcessingLevel level)
     }
 }
 
+static void collectNestedJarIdsAndProvides(ModDetails& details, const QString& filePath)
+{
+    MMCZip::ArchiveReader zip(filePath);
+    QStringList nested;
+    zip.parse([&nested](MMCZip::ArchiveReader::File* file, bool&) {
+        QString name = file->filename();
+        if ((name.startsWith("META-INF/jars/") || name.startsWith("META-INF/jarjar/")) && name.endsWith(".jar")) {
+            nested.append(name);
+        }
+        file->skip();
+        return true;
+    });
+    for (const auto& n : nested) {
+        MMCZip::ArchiveReader innerZip(filePath);
+        innerZip.parse([&n, &details](MMCZip::ArchiveReader::File* file, bool& stop) {
+            if (file->filename() == n) {
+                QByteArray bytes = file->readAll();
+                if (!bytes.isEmpty()) {
+                    QTemporaryFile tmp;
+                    tmp.setAutoRemove(false);
+                    if (tmp.open()) {
+                        tmp.write(bytes);
+                        tmp.flush();
+                        tmp.close();
+                        QString tmpPath = tmp.fileName();
+                        MMCZip::ArchiveReader nested(tmpPath);
+                        nested.parse([&details](MMCZip::ArchiveReader::File* nf, bool& nstop) {
+                            QString fn = nf->filename();
+                            if (fn == "fabric.mod.json") {
+                                QByteArray d = nf->readAll();
+                                if (!d.isEmpty()) {
+                                    try {
+                                        QJsonDocument doc = QJsonDocument::fromJson(d);
+                                        if (doc.isObject()) {
+                                            auto obj = doc.object();
+                                            QString id = obj.value("id").toString();
+                                            if (!id.isEmpty() && !details.provides.contains(id)) details.provides.append(id);
+                                            auto prov = obj.value("provides");
+                                            if (prov.isArray()) for (auto v : prov.toArray()) {
+                                                QString p = v.isString() ? v.toString() : v.toObject().value("id").toString();
+                                                if (!p.isEmpty() && !details.provides.contains(p)) details.provides.append(p);
+                                            } else if (prov.isObject()) for (auto k : prov.toObject().keys()) if (!k.isEmpty() && !details.provides.contains(k)) details.provides.append(k);
+                                        }
+                                    } catch (...) {}
+                                }
+                                nstop = true; return true;
+                            } else if (fn == "quilt.mod.json") {
+                                QByteArray d = nf->readAll();
+                                if (!d.isEmpty()) {
+                                    try {
+                                        QJsonDocument doc = QJsonDocument::fromJson(d);
+                                        if (doc.isObject()) {
+                                            auto ql = doc.object().value("quilt_loader").toObject();
+                                            QString id = ql.value("id").toString();
+                                            if (!id.isEmpty() && !details.provides.contains(id)) details.provides.append(id);
+                                            auto prov = ql.value("provides");
+                                            if (prov.isArray()) for (auto v : prov.toArray()) {
+                                                QString p = v.isString() ? v.toString() : v.toObject().value("id").toString();
+                                                if (!p.isEmpty() && !details.provides.contains(p)) details.provides.append(p);
+                                            }
+                                        }
+                                    } catch (...) {}
+                                }
+                                nstop = true; return true;
+                            } else if (fn == "META-INF/mods.toml" || fn == "META-INF/neoforge.mods.toml") {
+                                QByteArray d = nf->readAll();
+                                if (!d.isEmpty()) {
+                                    try {
+                                        ModDetails nd = ReadMCModTOML(d);
+                                        if (!nd.mod_id.isEmpty() && !details.provides.contains(nd.mod_id)) details.provides.append(nd.mod_id);
+                                        for (auto p : nd.provides) if (!p.isEmpty() && !details.provides.contains(p)) details.provides.append(p);
+                                    } catch (...) {}
+                                }
+                                nstop = true; return true;
+                            } else if (fn == "mcmod.info") {
+                                QByteArray d = nf->readAll();
+                                if (!d.isEmpty()) {
+                                    try {
+                                        ModDetails nd = ReadMCModInfo(d);
+                                        if (!nd.mod_id.isEmpty() && !details.provides.contains(nd.mod_id)) details.provides.append(nd.mod_id);
+                                    } catch (...) {}
+                                }
+                                nstop = true; return true;
+                            }
+                            nf->skip(); return true;
+                        });
+                        QFile::remove(tmpPath);
+                    }
+                }
+                stop = true; return true;
+            }
+            file->skip(); return true;
+        });
+    }
+}
 /** The loaders a jar is built for, told from the metadata files it carries.
  *
  *  One jar can hold metadata for several loaders at once, so this walks the whole archive rather
@@ -745,6 +885,7 @@ bool processZIP(Mod& mod, [[maybe_unused]] ProcessingLevel level)
         details.local_loaders = detectLoaders(mod.fileinfo().filePath());
         if (details.local_loaders.isEmpty())
             details.local_loaders = { "java" };
+        collectNestedJarIdsAndProvides(details, mod.fileinfo().filePath());
         mod.setDetails(details);
         return true;
     }
@@ -767,6 +908,7 @@ bool processFolder(Mod& mod, [[maybe_unused]] ProcessingLevel level)
         details.local_loaders = { "forge" };
         if (details.local_loaders.isEmpty())
             details.local_loaders = { "java" };
+        collectNestedJarIdsAndProvides(details, mod.fileinfo().filePath());
 
         mod.setDetails(details);
         return true;
