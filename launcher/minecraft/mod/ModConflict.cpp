@@ -31,6 +31,7 @@ bool accepts(const QString& instanceLoader, const QString& modLoader)
         return true;
     if (instanceLoader == "neoforge" && modLoader == "forge")
         return true;
+
     // Generic mods don't belong to a specific loader
     if (modLoader == "java" || modLoader == "minecraft")
         return true;
