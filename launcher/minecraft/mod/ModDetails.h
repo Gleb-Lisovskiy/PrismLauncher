@@ -140,6 +140,14 @@ struct ModDetails {
 
     QStringList dependencies = {};
 
+    /** Mod IDs this mod says it cannot be loaded together with. */
+    QStringList breaks = {};
+
+    /** The loaders this mod is built for, as ModPlatform names them and in lowercase. A jar can
+     *  carry metadata for more than one at once, so this is a list. Empty when the metadata does
+     *  not say. */
+    QStringList local_loaders = {};
+
     ModDetails() = default;
 
     /** Metadata should be handled manually to properly set the mod status. */
@@ -155,6 +163,8 @@ struct ModDetails {
         , licenses(other.licenses)
         , icon_file(other.icon_file)
         , dependencies(other.dependencies)
+        , breaks(other.breaks)
+        , local_loaders(other.local_loaders)
     {}
 
     ModDetails& operator=(const ModDetails& other) = default;
