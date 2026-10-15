@@ -5,6 +5,7 @@
 #include "TemplateInstanceCreationTask.h"
 
 #include <QDebug>
+#include <QDir>
 #include <QFile>
 #include <QFileInfo>
 
@@ -14,7 +15,6 @@
 #include "FileSystem.h"
 #include "minecraft/MinecraftInstance.h"
 #include "minecraft/PackProfile.h"
-#include "minecraft/mod/LibraryIndex.h"
 #include "settings/INISettingsObject.h"
 #include "settings/SettingsObject.h"
 
@@ -49,41 +49,51 @@ std::unique_ptr<MinecraftInstance> TemplateCreationTask::createInstance()
 
     InstanceTemplate::applySettings(instance->settings(), m_template.settings);
 
-    copyLibraryFiles(*instance);
+    copyTemplateFiles(*instance);
 
     return instance;
 }
 
-void TemplateCreationTask::copyLibraryFiles(MinecraftInstance& instance)
+void TemplateCreationTask::copyTemplateFiles(MinecraftInstance& instance)
 {
-    if (m_template.libraryEntries.isEmpty())
+    if (m_template.files.isEmpty())
         return;
 
-    auto* library = APPLICATION->library();
-    if (!library)
-        return;
+    const QString payloadDir = APPLICATION->templates()->payloadDir(m_template.id);
+    const QString targetRoot = instance.gameRoot();
+
+    // Folders first, so an empty one survives even though no file recreates it.
+    for (const auto& entry : m_template.files) {
+        if (!entry.isDir)
+            continue;
+        const QString destination = FS::PathCombine(targetRoot, entry.path);
+        if (!QDir().mkpath(destination))
+            qWarning() << "Could not create a template folder in the new instance:" << destination;
+    }
+
+    int total = 0;
+    for (const auto& entry : m_template.files) {
+        if (!entry.isDir)
+            total++;
+    }
 
     int copied = 0;
-    for (const auto& id : m_template.libraryEntries) {
-        const auto* entry = library->find(id);
-        if (!entry)
+    for (const auto& file : m_template.files) {
+        if (file.isDir)
             continue;
 
-        const QString targetDir = InstanceTemplate::resourceDirFor(instance, entry->type);
-        if (targetDir.isEmpty() || !FS::ensureFolderPathExists(targetDir))
-            continue;
-
-        const QString source = library->absoluteFilePath(*entry);
+        const QString source = FS::PathCombine(payloadDir, file.path);
         if (!QFileInfo::exists(source))
             continue;
 
-        const QString destination = FS::PathCombine(targetDir, QFileInfo(entry->file).fileName());
-        // Two library entries can describe the same file name; the first one wins.
+        const QString destination = FS::PathCombine(targetRoot, file.path);
+        // The template holds each file once, so two entries cannot collide; a file that is already
+        // there is left alone rather than overwritten.
         if (QFileInfo::exists(destination))
             continue;
 
-        setStatus(tr("Copying template files... (%1/%2)").arg(++copied).arg(m_template.libraryEntries.size()));
-        if (!QFile::copy(source, destination))
-            qWarning() << "Could not copy a library file into the new instance:" << source << "->" << destination;
+        setStatus(tr("Copying template files... (%1/%2)").arg(++copied).arg(total));
+        if (!FS::ensureFilePathExists(destination) || !QFile::copy(source, destination))
+            qWarning() << "Could not copy a template file into the new instance:" << source << "->" << destination;
     }
 }

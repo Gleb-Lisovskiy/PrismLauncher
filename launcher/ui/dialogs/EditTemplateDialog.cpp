@@ -16,6 +16,7 @@ EditTemplateDialog::EditTemplateDialog(const InstanceTemplate& tpl, QWidget* par
     ui->setupUi(this);
 
     ui->nameEdit->setText(tpl.name);
+    ui->versionEdit->setText(tpl.versionName);
     ui->descriptionEdit->setPlainText(tpl.description);
 
     connect(ui->nameEdit, &QLineEdit::textChanged, this, &EditTemplateDialog::updateDialogState);
@@ -34,6 +35,7 @@ InstanceTemplate EditTemplateDialog::templateToSave() const
 {
     InstanceTemplate tpl = m_template;
     tpl.name = ui->nameEdit->text().trimmed();
+    tpl.versionName = ui->versionEdit->text().trimmed();
     tpl.description = ui->descriptionEdit->toPlainText().trimmed();
     return tpl;
 }

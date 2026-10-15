@@ -12,8 +12,8 @@ namespace Ui {
 class EditTemplateDialog;
 }
 
-/** Edits the parts of a template that are not its recipe: the name and the markdown description
- *  shown beside it.
+/** Edits the parts of a template that are not its recipe: the name it is listed under, the version
+ *  label the picker shows for it, and the markdown description shown beside it.
  *
  *  Everything the template captured from the instance when it was saved (the components, the
  *  overridden settings, the library files it uses) is left alone. Those describe a snapshot, and

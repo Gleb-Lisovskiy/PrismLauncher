@@ -19,9 +19,21 @@
         <source>Optional. Markdown is supported.</source>
         <translation type="unfinished"></translation>
     </message>
+    <message>
+        <source>Version:</source>
+        <translation type="unfinished"></translation>
+    </message>
 </context>
 <context>
     <name>InstanceTemplateStore</name>
+    <message>
+        <source>Could not create the folder for the template&apos;s files.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Could not copy &quot;%1&quot; into the template.</source>
+        <translation type="unfinished"></translation>
+    </message>
     <message>
         <source>The templates file is not a JSON object.</source>
         <translation type="unfinished"></translation>
@@ -456,6 +468,29 @@ Are you sure?</source>
     </message>
     <message>
         <source>No mod loader was installed. Please try again.</source>
+        <translation type="unfinished"></translation>
+    </message>
+</context>
+<context>
+    <name>NewInstanceDialog</name>
+    <message>
+        <source>No group</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>OK</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Cancel</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Help</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>New Instance</source>
         <translation type="unfinished"></translation>
     </message>
 </context>
@@ -902,11 +937,31 @@ Are you sure?</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
+        <source>Description:</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Optional. Markdown is supported.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
         <source>Remember the instance settings you changed</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <source>Include files taken from your local files folder</source>
+        <source>Choose which files and folders to include:</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Reading the instance...</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Cancel</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Scanning files... (%1 found)</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
@@ -922,7 +977,15 @@ Are you sure?</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <source>Files taken from your local files folder:</source>
+        <source>Add version to &quot;%1&quot;</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>These files and folders are copied into the template and laid down in the new instance:</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Nothing will be copied into the template.</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
@@ -930,11 +993,7 @@ Are you sure?</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <source>Description:</source>
-        <translation type="unfinished"></translation>
-    </message>
-    <message>
-        <source>Optional. Markdown is supported.</source>
+        <source>Version:</source>
         <translation type="unfinished"></translation>
     </message>
 </context>
@@ -1038,11 +1097,11 @@ Are you sure?</source>
 <context>
     <name>TemplatePage</name>
     <message>
-        <source>Start from a recipe you saved earlier: the game version and mod loader, the instance settings you changed, and files taken from your local files folder.</source>
+        <source>Save from an instance...</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <source>Save from an instance...</source>
+        <source>Edit...</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
@@ -1066,15 +1125,11 @@ Are you sure?</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <source>No files are taken from your local files folder.</source>
+        <source>It does not carry any of the instance&apos;s files.</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <source>The files it used are no longer in your local files folder.</source>
-        <translation type="unfinished"></translation>
-    </message>
-    <message>
-        <source>Files taken from your local files folder:</source>
+        <source>It lays down these files and folders:</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
@@ -1086,11 +1141,11 @@ Are you sure?</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <source>Delete template</source>
+        <source>Saving the template...</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <source>Delete the template &quot;%1&quot;? This cannot be undone.</source>
+        <source>Cancel</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
@@ -1098,11 +1153,27 @@ Are you sure?</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
+        <source>Could not save the template: %1</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Delete version</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Delete the version &quot;%1&quot;? This cannot be undone.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
         <source>Could not read the templates file: %1</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <source>Edit...</source>
+        <source>Version selected:</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Add version...</source>
         <translation type="unfinished"></translation>
     </message>
 </context>

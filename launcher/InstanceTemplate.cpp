@@ -6,6 +6,7 @@
 
 #include <QCoreApplication>
 #include <QDebug>
+#include <QDir>
 #include <QFile>
 #include <QFileInfo>
 #include <QJsonArray>
@@ -14,9 +15,9 @@
 #include <QSaveFile>
 #include <QUuid>
 
+#include <algorithm>
 #include <utility>
 
-#include "Application.h"
 #include "FileSystem.h"
 #include "minecraft/Component.h"
 #include "minecraft/MinecraftInstance.h"
@@ -86,6 +87,55 @@ QList<InstanceTemplate::Component> readComponents(BaseInstance& instance)
     return out;
 }
 
+/** Lists every file and folder under a directory, descending into subdirectories.
+ *
+ *  Hidden entries are skipped, matching the launcher's own resource lists, and an entry keeps its
+ *  path relative to the game directory so nested layouts survive the round trip. Folders are
+ *  reported before their contents, and an empty folder is reported too, so the save dialog can show
+ *  the instance's shape rather than only the leaves that happen to hold files.
+ *
+ *  Within a directory, folders come before files, each in name order: the tree the picker builds
+ *  from this reads better when the folders of a level sit together instead of being scattered among
+ *  the files. A folder is still listed before anything inside it, so the shape is walked top down.
+ *
+ *  Returns false when the caller's progress callback asks to stop. */
+bool collectContentFiles(const QString& dir,
+                         const QString& relative,
+                         QList<InstanceTemplate::File>& out,
+                         const InstanceTemplate::FileScanProgress& progress,
+                         int& sinceReport)
+{
+    QDir qdir(dir);
+    qdir.setFilter(QDir::Readable | QDir::NoDotAndDotDot | QDir::Files | QDir::Dirs);
+    qdir.setSorting(QDir::Name | QDir::IgnoreCase | QDir::LocaleAware);
+
+    // The directory listing already comes in name order, so a stable partition on the folder flag
+    // gives folders first and files second without disturbing the order within either group.
+    QFileInfoList entries = qdir.entryInfoList();
+    std::stable_partition(entries.begin(), entries.end(), [](const QFileInfo& entry) { return entry.isDir(); });
+
+    for (const QFileInfo& entry : entries) {
+        const QString name = entry.fileName();
+        const QString path = relative.isEmpty() ? name : relative + QLatin1Char('/') + name;
+        if (entry.isDir()) {
+            out.append({ path, {}, true });
+            if (!collectContentFiles(entry.absoluteFilePath(), path, out, progress, sinceReport))
+                return false;
+        } else if (entry.isFile()) {
+            out.append({ path, entry.absoluteFilePath(), false });
+        }
+
+        // Reporting on every entry would spend more time repainting the dialog than reading the
+        // folder, so the callback only hears about it in batches.
+        if (progress && ++sinceReport >= 64) {
+            sinceReport = 0;
+            if (!progress(static_cast<int>(out.size())))
+                return false;
+        }
+    }
+    return true;
+}
+
 }  // namespace
 
 QString InstanceTemplate::minecraftVersion() const
@@ -140,21 +190,6 @@ QString InstanceTemplate::loaderBrand(const QString& uid)
     }
 }
 
-QString InstanceTemplate::resourceDirFor(MinecraftInstance& instance, LibraryIndex::Type type)
-{
-    switch (type) {
-        case LibraryIndex::Type::Mod:
-            return instance.modsRoot();
-        case LibraryIndex::Type::ResourcePack:
-            return instance.resourcePacksDir();
-        case LibraryIndex::Type::ShaderPack:
-            return instance.shaderPacksDir();
-        case LibraryIndex::Type::TexturePack:
-            return instance.texturePacksDir();
-    }
-    return {};
-}
-
 QMap<QString, QVariant> InstanceTemplate::readSettings(BaseInstance& instance)
 {
     QMap<QString, QVariant> out;
@@ -175,33 +210,16 @@ QMap<QString, QVariant> InstanceTemplate::readSettings(BaseInstance& instance)
     return out;
 }
 
-QStringList InstanceTemplate::installedLibraryEntries(BaseInstance& instance)
+QList<InstanceTemplate::File> InstanceTemplate::contentFiles(const QString& gameRoot, const FileScanProgress& progress)
 {
-    QStringList found;
+    QList<File> out;
 
-    auto* mc = qobject_cast<MinecraftInstance*>(&instance);
-    auto* library = APPLICATION->library();
-    if (!mc || !library)
-        return found;
-
-    for (const auto& entry : library->entries()) {
-        const QString dir = resourceDirFor(*mc, entry.type);
-        if (dir.isEmpty())
-            continue;
-
-        const QFileInfo installed(FS::PathCombine(dir, QFileInfo(entry.file).fileName()));
-        if (!installed.isFile())
-            continue;
-
-        // A shared file name is not proof enough that it is the same payload; the size has to agree
-        // too, so an unrelated file that happens to share a name is not quietly claimed.
-        const QFileInfo source(library->absoluteFilePath(entry));
-        if (source.exists() && source.size() != installed.size())
-            continue;
-
-        found.append(entry.id);
-    }
-    return found;
+    int sinceReport = 0;
+    if (QDir(gameRoot).exists())
+        collectContentFiles(gameRoot, {}, out, progress, sinceReport);
+    if (progress)
+        progress(static_cast<int>(out.size()));
+    return out;
 }
 
 void InstanceTemplate::applySettings(SettingsObject* settings, const QMap<QString, QVariant>& values)
@@ -214,7 +232,7 @@ void InstanceTemplate::applySettings(SettingsObject* settings, const QMap<QStrin
     }
 }
 
-InstanceTemplate InstanceTemplate::captureFrom(BaseInstance& instance, const QString& name)
+InstanceTemplate InstanceTemplate::captureFrom(BaseInstance& instance, const QString& name, const FileScanProgress& progress)
 {
     InstanceTemplate tpl;
     tpl.name = name;
@@ -222,7 +240,8 @@ InstanceTemplate InstanceTemplate::captureFrom(BaseInstance& instance, const QSt
     tpl.createdAt = QDateTime::currentDateTime();
     tpl.components = readComponents(instance);
     tpl.settings = readSettings(instance);
-    tpl.libraryEntries = installedLibraryEntries(instance);
+    if (auto* mc = qobject_cast<MinecraftInstance*>(&instance))
+        tpl.files = contentFiles(mc->gameRoot(), progress);
     return tpl;
 }
 
@@ -231,6 +250,8 @@ QJsonObject InstanceTemplate::toJson() const
     QJsonObject obj;
     obj.insert("id", id);
     obj.insert("name", name);
+    if (!versionName.isEmpty())
+        obj.insert("version-name", versionName);
     if (!description.isEmpty())
         obj.insert("description", description);
     obj.insert("icon", iconKey);
@@ -246,10 +267,15 @@ QJsonObject InstanceTemplate::toJson() const
     }
     obj.insert("components", componentsArr);
 
-    QJsonArray libraryArr;
-    for (const auto& entry : libraryEntries)
-        libraryArr.append(entry);
-    obj.insert("library", libraryArr);
+    QJsonArray filesArr;
+    for (const auto& file : files) {
+        QJsonObject entry;
+        entry.insert("path", file.path);
+        if (file.isDir)
+            entry.insert("dir", true);
+        filesArr.append(entry);
+    }
+    obj.insert("files", filesArr);
 
     QJsonObject settingsObj;
     for (auto it = settings.constBegin(); it != settings.constEnd(); ++it)
@@ -264,6 +290,7 @@ InstanceTemplate InstanceTemplate::fromJson(const QJsonObject& json)
     InstanceTemplate tpl;
     tpl.id = json.value("id").toString();
     tpl.name = json.value("name").toString();
+    tpl.versionName = json.value("version-name").toString();
     tpl.description = json.value("description").toString();
     tpl.iconKey = json.value("icon").toString(QStringLiteral("default"));
     tpl.createdAt = QDateTime::fromString(json.value("created-at").toString(), Qt::ISODate);
@@ -276,10 +303,22 @@ InstanceTemplate InstanceTemplate::fromJson(const QJsonObject& json)
             tpl.components.append({ uid, version });
     }
 
-    for (const auto& value : json.value("library").toArray()) {
-        const QString id = value.toString();
-        if (!id.isEmpty())
-            tpl.libraryEntries.append(id);
+    for (const auto& value : json.value("files").toArray()) {
+        const auto entry = value.toObject();
+        QString path = entry.value("path").toString();
+        const bool isDir = entry.value("dir").toBool();
+
+        // Templates written before the picker covered the whole game directory stored a path relative
+        // to a content folder named by "type". The path is now relative to the game directory, so the
+        // old type simply becomes its first component.
+        const QString legacyType = entry.value("type").toString();
+        if (!legacyType.isEmpty())
+            path = path.isEmpty() ? legacyType : legacyType + QLatin1Char('/') + path;
+
+        // An entry without a path names nothing that can be laid down, file or folder.
+        if (path.isEmpty())
+            continue;
+        tpl.files.append({ path, {}, isDir });
     }
 
     const auto settingsObj = json.value("settings").toObject();
@@ -290,6 +329,52 @@ InstanceTemplate InstanceTemplate::fromJson(const QJsonObject& json)
 }
 
 InstanceTemplateStore::InstanceTemplateStore(QString filePath) : m_filePath(std::move(filePath)) {}
+
+QString InstanceTemplateStore::dataDir() const
+{
+    return QFileInfo(m_filePath).absolutePath();
+}
+
+QString InstanceTemplateStore::payloadDir(const QString& id) const
+{
+    return FS::PathCombine(dataDir(), "instance_templates", id);
+}
+
+bool InstanceTemplateStore::stageFiles(InstanceTemplate& tpl, QString* error, const CopyProgress& progress)
+{
+    // Folders carry nothing to copy; they are recreated empty when an instance is built.
+    int total = 0;
+    for (const auto& file : tpl.files) {
+        if (!file.isDir && !file.source.isEmpty())
+            total++;
+    }
+
+    int done = 0;
+    for (auto& file : tpl.files) {
+        if (file.isDir || file.source.isEmpty())
+            continue;
+
+        const QString destination = FS::PathCombine(payloadDir(tpl.id), file.path);
+        if (!FS::ensureFilePathExists(destination)) {
+            if (error)
+                *error = QCoreApplication::translate("InstanceTemplateStore", "Could not create the folder for the template's files.");
+            return false;
+        }
+        if (!QFile::copy(file.source, destination)) {
+            if (error)
+                *error = QCoreApplication::translate("InstanceTemplateStore", "Could not copy \"%1\" into the template.").arg(file.source);
+            return false;
+        }
+        // The payload now lives in the template, so the source is only meaningful the first time.
+        file.source.clear();
+
+        if (progress && !progress(++done, total)) {
+            // A cancellation is not a failure, so no error is set; the caller cleans up and stays quiet.
+            return false;
+        }
+    }
+    return true;
+}
 
 bool InstanceTemplateStore::load(QString* error)
 {
@@ -338,7 +423,7 @@ bool InstanceTemplateStore::save(QString* error) const
         templatesArr.append(tpl.toJson());
 
     QJsonObject root;
-    root.insert("format-version", 1);
+    root.insert("format-version", 3);
     root.insert("templates", templatesArr);
 
     if (!FS::ensureFilePathExists(m_filePath)) {
@@ -371,12 +456,38 @@ const InstanceTemplate* InstanceTemplateStore::find(const QString& id) const
     return nullptr;
 }
 
-QString InstanceTemplateStore::add(InstanceTemplate tpl)
+QList<InstanceTemplate> InstanceTemplateStore::versionsOf(const QString& name) const
+{
+    QList<InstanceTemplate> out;
+    for (const auto& tpl : m_templates) {
+        if (tpl.name == name)
+            out.append(tpl);
+    }
+    return out;
+}
+
+QString InstanceTemplateStore::add(InstanceTemplate tpl, QString* error, const CopyProgress& progress)
 {
     if (tpl.id.isEmpty())
         tpl.id = QUuid::createUuid().toString(QUuid::WithoutBraces);
     if (!tpl.createdAt.isValid())
         tpl.createdAt = QDateTime::currentDateTime();
+
+    // If this identifier is already known its old payload has to go first, or files the new version of
+    // the template does not have would linger next to the freshly copied ones.
+    for (const auto& existing : m_templates) {
+        if (existing.id == tpl.id) {
+            FS::deletePath(payloadDir(tpl.id));
+            break;
+        }
+    }
+
+    // The payloads are copied in before the template joins the list: one whose files could not be
+    // stored should not be offered as though it worked.
+    if (!stageFiles(tpl, error, progress)) {
+        FS::deletePath(payloadDir(tpl.id));
+        return {};
+    }
 
     // The identifier is the template's identity, so a repeated one replaces the old entry instead of
     // producing two templates that cannot be told apart.
@@ -392,20 +503,31 @@ QString InstanceTemplateStore::add(InstanceTemplate tpl)
     if (!replaced)
         m_templates.append(tpl);
 
-    QString error;
-    if (!save(&error))
-        qWarning() << "Could not save the templates file:" << error;
+    QString writeError;
+    if (!save(&writeError)) {
+        qWarning() << "Could not save the templates file:" << writeError;
+        if (error)
+            *error = writeError;
+    }
     return id;
 }
 
-bool InstanceTemplateStore::update(const InstanceTemplate& tpl)
+bool InstanceTemplateStore::update(const InstanceTemplate& tpl, QString* error)
 {
     for (auto& existing : m_templates) {
         if (existing.id == tpl.id) {
-            existing = tpl;
-            QString error;
-            if (!save(&error)) {
-                qWarning() << "Could not save the templates file:" << error;
+            // Editing a template only changes its name and description, so there is nothing new to
+            // copy; staging still runs so a template loaded from an older file picks up any payloads
+            // the caller happened to fill in.
+            InstanceTemplate staged = tpl;
+            if (!stageFiles(staged, error, {}))
+                return false;
+            existing = staged;
+            QString writeError;
+            if (!save(&writeError)) {
+                qWarning() << "Could not save the templates file:" << writeError;
+                if (error)
+                    *error = writeError;
                 return false;
             }
             return true;
@@ -419,6 +541,8 @@ bool InstanceTemplateStore::remove(const QString& id)
     for (auto it = m_templates.begin(); it != m_templates.end(); ++it) {
         if (it->id == id) {
             m_templates.erase(it);
+            // The folder is not referenced by anything else, so it goes with the template.
+            FS::deletePath(payloadDir(id));
             QString error;
             if (!save(&error)) {
                 qWarning() << "Could not save the templates file:" << error;

@@ -80,42 +80,52 @@ RU = {
 
     # --- instance templates ---
     "Templates": "Шаблоны",
+    #: The label next to the template picker at the bottom of the page.
+    "TemplatePage|Version selected:": "Выбранная версия:",
     "Save from an instance...": "Сохранить из инстанса...",
-    "Start from a recipe you saved earlier: the game version and mod loader, the instance settings "
-    "you changed, and files taken from your local files folder.":
-        "Начните с сохранённого рецепта: версия игры и загрузчик модов, изменённые настройки "
-        "инстанса и файлы из папки локальных файлов.",
+    "Add version...": "Добавить версию...",
+    "Version:": "Версия:",
     "Select a template to see what it will create.":
         "Выберите шаблон, чтобы увидеть, что он создаст.",
-    "No files are taken from your local files folder.":
-        "Файлы из папки локальных файлов не используются.",
-    "The files it used are no longer in your local files folder.":
-        "Использованные им файлы больше не в папке локальных файлов.",
+    "It does not carry any of the instance's files.":
+        "Не содержит файлов инстанса.",
+    "It lays down these files and folders:":
+        "Раскладывает эти файлы и папки:",
     "It follows your global settings.": "Использует глобальные настройки.",
     "It also remembers the instance settings you changed.":
         "Также запоминает изменённые настройки инстанса.",
-    "Files taken from your local files folder:": "Файлы из папки локальных файлов:",
     "Minecraft %1": "Minecraft %1",
     "Unknown Minecraft version": "Неизвестная версия Minecraft",
     "Edit...": "Изменить...",
     "Delete": "Удалить",
     "Refresh": "Обновить",
-    "Delete template": "Удалить шаблон",
-    "Delete the template \"%1\"? This cannot be undone.":
-        "Удалить шаблон «%1»? Это действие необратимо.",
+    "Delete version": "Удалить версию",
+    "Delete the version \"%1\"? This cannot be undone.":
+        "Удалить версию «%1»? Это действие необратимо.",
     "Could not read the templates file: %1":
         "Не удалось прочитать файл шаблонов: %1",
+    "Could not save the template: %1":
+        "Не удалось сохранить шаблон: %1",
+    "Saving the template...": "Сохранение шаблона...",
+    "Cancel": "Отмена",
 
     # --- saving a template from an instance ---
     "Save as Template": "Сохранить как шаблон",
+    "Add version to \"%1\"": "Добавить версию к «%1»",
     "Instance:": "Инстанс:",
     "Name:": "Имя:",
     "Description:": "Описание:",
     "Optional. Markdown is supported.": "Необязательно. Поддерживается markdown.",
     "Remember the instance settings you changed":
         "Запомнить изменённые настройки инстанса",
-    "Include files taken from your local files folder":
-        "Включить файлы из папки локальных файлов",
+    "Choose which files and folders to include:":
+        "Выберите, какие файлы и папки включить:",
+    "These files and folders are copied into the template and laid down in the new instance:":
+        "Эти файлы и папки копируются в шаблон и раскладываются в новом инстансе:",
+    "Reading the instance...": "Чтение инстанса...",
+    "Scanning files... (%1 found)": "Сканирование файлов... (%1 найдено)",
+    "Nothing will be copied into the template.":
+        "В шаблон ничего не будет скопировано.",
     "The instance settings you changed are remembered.":
         "Изменённые настройки инстанса будут запомнены.",
     "There are no instances to save a template from yet.":
@@ -133,6 +143,10 @@ RU = {
     # --- the templates file ---
     "Could not create the folder for the templates file.":
         "Не удалось создать папку для файла шаблонов.",
+    "Could not create the folder for the template's files.":
+        "Не удалось создать папку для файлов шаблона.",
+    "Could not copy \"%1\" into the template.":
+        "Не удалось скопировать «%1» в шаблон.",
     "The templates file is not a JSON object.":
         "Файл шаблонов не является объектом JSON.",
 }

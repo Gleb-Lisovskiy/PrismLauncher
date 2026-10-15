@@ -10,8 +10,9 @@
 /** Creates a new instance from a saved template.
  *
  *  This is the counterpart of saving one: the recorded components are set up from scratch, the
- *  recorded settings are written to the fresh instance.cfg, and the library entries the template
- *  mentions are copied out of the library and into the matching folders of the new instance. */
+ *  recorded settings are written to the fresh instance.cfg, and the content files the template
+ *  carries are copied out of the template's own folder and into the matching folders of the new
+ *  instance. */
 class TemplateCreationTask final : public InstanceCreationTask {
     Q_OBJECT
    public:
@@ -20,7 +21,7 @@ class TemplateCreationTask final : public InstanceCreationTask {
     std::unique_ptr<MinecraftInstance> createInstance() override;
 
    private:
-    void copyLibraryFiles(MinecraftInstance& instance);
+    void copyTemplateFiles(MinecraftInstance& instance);
 
     InstanceTemplate m_template;
 };

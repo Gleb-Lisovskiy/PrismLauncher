@@ -26,6 +26,18 @@ msgctxt "EditTemplateDialog"
 msgid "Optional. Markdown is supported."
 msgstr "Необязательно. Поддерживается markdown."
 
+msgctxt "EditTemplateDialog"
+msgid "Version:"
+msgstr "Версия:"
+
+msgctxt "InstanceTemplateStore"
+msgid "Could not copy \"%1\" into the template."
+msgstr "Не удалось скопировать «%1» в шаблон."
+
+msgctxt "InstanceTemplateStore"
+msgid "Could not create the folder for the template's files."
+msgstr "Не удалось создать папку для файлов шаблона."
+
 msgctxt "InstanceTemplateStore"
 msgid "Could not create the folder for the templates file."
 msgstr "Не удалось создать папку для файла шаблонов."
@@ -86,6 +98,10 @@ msgctxt "ModFolderPage"
 msgid "Get mods from your local files folder or from online mod platforms"
 msgstr "Взять моды из папки локальных файлов или с онлайн-платформ"
 
+msgctxt "NewInstanceDialog"
+msgid "Cancel"
+msgstr "Отмена"
+
 msgctxt "QObject"
 msgid "Could not copy %1 into the library"
 msgstr "Не удалось скопировать %1 в библиотеку"
@@ -127,6 +143,10 @@ msgid "'%1' does not allow downloads from third-party launchers and no project p
 msgstr "«%1» не разрешает загрузку сторонними лаунчерами, и страница проекта неизвестна."
 
 msgctxt "ResourceDownload::ResourcePage"
+msgid "Cancel"
+msgstr "Отмена"
+
+msgctxt "ResourceDownload::ResourcePage"
 msgid "Install an incompatible version?"
 msgstr "Установить несовместимую версию?"
 
@@ -143,16 +163,20 @@ msgid "Save to Local Files"
 msgstr "Сохранить в локальные файлы"
 
 msgctxt "SaveTemplateDialog"
+msgid "Add version to \"%1\""
+msgstr "Добавить версию к «%1»"
+
+msgctxt "SaveTemplateDialog"
+msgid "Cancel"
+msgstr "Отмена"
+
+msgctxt "SaveTemplateDialog"
+msgid "Choose which files and folders to include:"
+msgstr "Выберите, какие файлы и папки включить:"
+
+msgctxt "SaveTemplateDialog"
 msgid "Description:"
 msgstr "Описание:"
-
-msgctxt "SaveTemplateDialog"
-msgid "Files taken from your local files folder:"
-msgstr "Файлы из папки локальных файлов:"
-
-msgctxt "SaveTemplateDialog"
-msgid "Include files taken from your local files folder"
-msgstr "Включить файлы из папки локальных файлов"
 
 msgctxt "SaveTemplateDialog"
 msgid "Instance:"
@@ -167,8 +191,16 @@ msgid "Name:"
 msgstr "Имя:"
 
 msgctxt "SaveTemplateDialog"
+msgid "Nothing will be copied into the template."
+msgstr "В шаблон ничего не будет скопировано."
+
+msgctxt "SaveTemplateDialog"
 msgid "Optional. Markdown is supported."
 msgstr "Необязательно. Поддерживается markdown."
+
+msgctxt "SaveTemplateDialog"
+msgid "Reading the instance..."
+msgstr "Чтение инстанса..."
 
 msgctxt "SaveTemplateDialog"
 msgid "Remember the instance settings you changed"
@@ -179,6 +211,10 @@ msgid "Save as Template"
 msgstr "Сохранить как шаблон"
 
 msgctxt "SaveTemplateDialog"
+msgid "Scanning files... (%1 found)"
+msgstr "Сканирование файлов... (%1 найдено)"
+
+msgctxt "SaveTemplateDialog"
 msgid "The instance settings you changed are remembered."
 msgstr "Изменённые настройки инстанса будут запомнены."
 
@@ -187,8 +223,16 @@ msgid "There are no instances to save a template from yet."
 msgstr "Пока нет инстансов, из которых можно сохранить шаблон."
 
 msgctxt "SaveTemplateDialog"
+msgid "These files and folders are copied into the template and laid down in the new instance:"
+msgstr "Эти файлы и папки копируются в шаблон и раскладываются в новом инстансе:"
+
+msgctxt "SaveTemplateDialog"
 msgid "Unknown Minecraft version"
 msgstr "Неизвестная версия Minecraft"
+
+msgctxt "SaveTemplateDialog"
+msgid "Version:"
+msgstr "Версия:"
 
 msgctxt "ShaderPackPage"
 msgid "Get shader packs from your local files folder or from online mod platforms"
@@ -207,44 +251,56 @@ msgid "The template does not remember a Minecraft version. Save it again from an
 msgstr "Шаблон не помнит версию Minecraft. Сохраните его заново из инстанса."
 
 msgctxt "TemplatePage"
+msgid "Add version..."
+msgstr "Добавить версию..."
+
+msgctxt "TemplatePage"
+msgid "Cancel"
+msgstr "Отмена"
+
+msgctxt "TemplatePage"
 msgid "Could not read the templates file: %1"
 msgstr "Не удалось прочитать файл шаблонов: %1"
+
+msgctxt "TemplatePage"
+msgid "Could not save the template: %1"
+msgstr "Не удалось сохранить шаблон: %1"
 
 msgctxt "TemplatePage"
 msgid "Delete"
 msgstr "Удалить"
 
 msgctxt "TemplatePage"
-msgid "Delete template"
-msgstr "Удалить шаблон"
+msgid "Delete the version \"%1\"? This cannot be undone."
+msgstr "Удалить версию «%1»? Это действие необратимо."
 
 msgctxt "TemplatePage"
-msgid "Delete the template \"%1\"? This cannot be undone."
-msgstr "Удалить шаблон «%1»? Это действие необратимо."
+msgid "Delete version"
+msgstr "Удалить версию"
 
 msgctxt "TemplatePage"
 msgid "Edit..."
 msgstr "Изменить..."
 
 msgctxt "TemplatePage"
-msgid "Files taken from your local files folder:"
-msgstr "Файлы из папки локальных файлов:"
-
-msgctxt "TemplatePage"
 msgid "It also remembers the instance settings you changed."
 msgstr "Также запоминает изменённые настройки инстанса."
+
+msgctxt "TemplatePage"
+msgid "It does not carry any of the instance's files."
+msgstr "Не содержит файлов инстанса."
 
 msgctxt "TemplatePage"
 msgid "It follows your global settings."
 msgstr "Использует глобальные настройки."
 
 msgctxt "TemplatePage"
-msgid "Minecraft %1"
-msgstr "Minecraft %1"
+msgid "It lays down these files and folders:"
+msgstr "Раскладывает эти файлы и папки:"
 
 msgctxt "TemplatePage"
-msgid "No files are taken from your local files folder."
-msgstr "Файлы из папки локальных файлов не используются."
+msgid "Minecraft %1"
+msgstr "Minecraft %1"
 
 msgctxt "TemplatePage"
 msgid "Refresh"
@@ -255,24 +311,24 @@ msgid "Save from an instance..."
 msgstr "Сохранить из инстанса..."
 
 msgctxt "TemplatePage"
-msgid "Select a template to see what it will create."
-msgstr "Выберите шаблон, чтобы увидеть, что он создаст."
+msgid "Saving the template..."
+msgstr "Сохранение шаблона..."
 
 msgctxt "TemplatePage"
-msgid "Start from a recipe you saved earlier: the game version and mod loader, the instance settings you changed, and files taken from your local files folder."
-msgstr "Начните с сохранённого рецепта: версия игры и загрузчик модов, изменённые настройки инстанса и файлы из папки локальных файлов."
+msgid "Select a template to see what it will create."
+msgstr "Выберите шаблон, чтобы увидеть, что он создаст."
 
 msgctxt "TemplatePage"
 msgid "Templates"
 msgstr "Шаблоны"
 
 msgctxt "TemplatePage"
-msgid "The files it used are no longer in your local files folder."
-msgstr "Использованные им файлы больше не в папке локальных файлов."
-
-msgctxt "TemplatePage"
 msgid "Unknown Minecraft version"
 msgstr "Неизвестная версия Minecraft"
+
+msgctxt "TemplatePage"
+msgid "Version selected:"
+msgstr "Выбранная версия:"
 
 msgctxt "TexturePackPage"
 msgid "Get texture packs from your local files folder or from online mod platforms"
