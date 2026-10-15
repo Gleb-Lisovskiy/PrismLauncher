@@ -176,6 +176,18 @@ class ModConflictTest : public QObject {
 
     void leavesFabricModsAloneWhenConnectorIsInstalled()
     {
+        auto mods = QList<ModRecord>{ makeMod("create", "Create"), makeMod("connectormod", "Connector") };
+        mods[0].loaders = { "fabric" };
+
+        ModScanContext context;
+        context.loaders = { "neoforge" };
+
+        QVERIFY(ModConflicts::scan(mods, context).isEmpty());
+    }
+
+    /** Older builds of Sinytra Connector used a shorter mod id. */
+    void leavesFabricModsAloneWhenConnectorReportsTheOldId()
+    {
         auto mods = QList<ModRecord>{ makeMod("create", "Create"), makeMod("connector", "Connector") };
         mods[0].loaders = { "fabric" };
 
@@ -188,7 +200,7 @@ class ModConflictTest : public QObject {
     /** Connector does not make a Forge mod at home in a Fabric instance. */
     void stillReportsThemWhenThereIsNoForgeToConnectTo()
     {
-        auto mods = QList<ModRecord>{ makeMod("create", "Create"), makeMod("connector", "Connector") };
+        auto mods = QList<ModRecord>{ makeMod("create", "Create"), makeMod("connectormod", "Connector") };
         mods[0].loaders = { "forge" };
 
         ModScanContext context;

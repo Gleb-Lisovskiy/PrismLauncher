@@ -163,8 +163,11 @@ QList<ModProblem> ModConflicts::scan(const QList<ModRecord>& mods, const ModScan
     };
 
     // Connector is precisely the thing that lets Fabric mods be loaded by a Forge-family instance,
-    // so its presence changes what counts as a loader mismatch.
-    const bool connector = enabledWithId("connector") != nullptr;
+    // so its presence changes what counts as a loader mismatch. Sinytra Connector calls itself
+    // "connectormod" in its metadata; the shorter "connector" is kept for older builds.
+    static const QStringList connectorIds = { "connectormod", "connector" };
+    const bool connector = std::any_of(connectorIds.begin(), connectorIds.end(),
+                                       [&](const QString& id) { return enabledWithId(id) != nullptr; });
     const bool contextIsForgeFamily = std::any_of(context.loaders.begin(), context.loaders.end(),
                                                   [](const QString& loader) { return loader == "forge" || loader == "neoforge"; });
 
