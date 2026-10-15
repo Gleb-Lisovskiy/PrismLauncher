@@ -909,6 +909,35 @@ bool processZIP(Mod& mod, [[maybe_unused]] ProcessingLevel level)
         mod.setDetails(details);
         return true;
     }
+    // Fallback: if the jar only bundles mods via jarjar and has no root metadata, synthesize a mod
+    // that provides the nested mod IDs so dependency checks work.
+    {
+        MMCZip::ArchiveReader zip(mod.fileinfo().filePath());
+        bool hasJarJar = false;
+        zip.parse([&hasJarJar](MMCZip::ArchiveReader::File* file, bool&) {
+            QString name = file->filename();
+            if (name == "META-INF/jarjar/metadata.json" || ((name.startsWith("META-INF/jars/") || name.startsWith("META-INF/jarjar/")) && name.endsWith(".jar"))) {
+                hasJarJar = true;
+            }
+            file->skip();
+            return true;
+        });
+        if (hasJarJar) {
+            ModDetails synthetic;
+            synthetic.local_loaders = detectLoaders(mod.fileinfo().filePath());
+            if (synthetic.local_loaders.isEmpty())
+                synthetic.local_loaders = { "java" };
+            collectNestedJarIdsAndProvides(synthetic, mod.fileinfo().filePath());
+            if (!synthetic.provides.isEmpty()) {
+                // Use the first provided mod ID as the mod id if none present; keep name/file-based
+                synthetic.mod_id = synthetic.provides.first();
+                synthetic.name = mod.fileinfo().baseName();
+                synthetic.version = "bundled";
+                mod.setDetails(synthetic);
+                return true;
+            }
+        }
+    }
     return false;  // no valid mod found in archive
 }
 
