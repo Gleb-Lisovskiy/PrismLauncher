@@ -22,6 +22,22 @@ class BasicTask : public Task {
     void executeTask() override { emitSucceeded(); }
 };
 
+/* Succeeds on its own after a short delay. Used to keep a shared subtask in flight. */
+class DelayedTask : public Task {
+    Q_OBJECT
+
+   public:
+    explicit DelayedTask(int delay_ms = 200) : Task(false), m_delay_ms(delay_ms) {}
+
+   private:
+    void executeTask() override
+    {
+        QTimer::singleShot(m_delay_ms, this, [this] { emitSucceeded(); });
+    }
+
+    int m_delay_ms;
+};
+
 /* Does nothing. Only used for testing. */
 class BasicTask_MultiStep : public Task {
     Q_OBJECT
@@ -258,6 +274,35 @@ class TaskTest : public QObject {
         loop.exec();
 
         QVERIFY(!thread.passed_the_deadline);
+    }
+
+    // A subtask instance can be shared between several tasks (e.g. a metadata load that is already
+    // in progress). Wrapping a running task must not start it a second time.
+    void test_sharedSubTaskDoesNotRestart()
+    {
+        auto shared = makeShared<DelayedTask>();
+
+        ConcurrentTask a;
+        ConcurrentTask b;
+        a.addTask(shared);
+        b.addTask(shared);
+
+        a.start();
+        QVERIFY2(QTest::qWaitFor([&shared] { return shared->isRunning(); }, 1000), "Shared subtask did not start.");
+
+        // Starting a second task that wraps the same running subtask must not trip the
+        // 'task started while already running' assertion.
+        b.start();
+        QVERIFY(b.isRunning());
+
+        // Give `b` a chance to attach to the already running subtask.
+        QTest::qWait(50);
+        QVERIFY(shared->isRunning());
+
+        QVERIFY2(QTest::qWaitFor([&a, &b] { return a.isFinished() && b.isFinished(); }, 2000), "Tasks sharing a subtask did not finish.");
+        QVERIFY(a.wasSuccessful());
+        QVERIFY(b.wasSuccessful());
+        QVERIFY(shared->wasSuccessful());
     }
 };
 

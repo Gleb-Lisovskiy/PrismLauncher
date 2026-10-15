@@ -168,7 +168,17 @@ void ConcurrentTask::startSubTask(Task::Ptr next)
 
     updateState();
 
-    QMetaObject::invokeMethod(next.get(), &Task::start, Qt::QueuedConnection);
+    // The same subtask instance can be shared between multiple tasks (for example the metadata
+    // index load wrapped by several version lists, or a version list that is already being loaded
+    // by someone else). Starting a task that is already running is a no-op that trips an assertion,
+    // so wait for that run to finish instead of kicking it off a second time.
+    QMetaObject::invokeMethod(
+        this,
+        [next] {
+            if (!next->isRunning())
+                next->start();
+        },
+        Qt::QueuedConnection);
 }
 
 void ConcurrentTask::subTaskFinished(Task::Ptr task, TaskStepState state)
