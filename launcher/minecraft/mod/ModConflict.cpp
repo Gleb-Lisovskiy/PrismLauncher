@@ -15,7 +15,7 @@ namespace {
 
 const QSet<QString>& knownLoaders()
 {
-    static const QSet<QString> loaders = { "fabric", "quilt", "forge", "neoforge" };
+    static const QSet<QString> loaders = { "fabric", "quilt", "forge", "neoforge", "java", "minecraft" };
     return loaders;
 }
 
@@ -30,6 +30,9 @@ bool accepts(const QString& instanceLoader, const QString& modLoader)
     if (instanceLoader == "quilt" && modLoader == "fabric")
         return true;
     if (instanceLoader == "neoforge" && modLoader == "forge")
+        return true;
+    // Generic mods don't belong to a specific loader
+    if (modLoader == "java" || modLoader == "minecraft")
         return true;
     return false;
 }

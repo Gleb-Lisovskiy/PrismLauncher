@@ -8,6 +8,7 @@
 #include <QJsonValue>
 #include <QRegularExpression>
 #include <QString>
+#include <optional>
 
 #include "FileSystem.h"
 #include "Json.h"
@@ -233,9 +234,10 @@ ModDetails ReadMCModTOML(QByteArray contents)
         if (!dependencies) {
             return;
         }
-        auto isNeoForgeDep = [](toml::table* t) {
+        // NeoForge spells the kind of a dependency out; Forge only tells us whether it is mandatory.
+        auto neoForgeDepType = [](toml::table* t) {
             auto type = (*t)["type"].as_string();
-            return type && type->get() == "required";
+            return type ? std::optional<std::string>(type->get()) : std::nullopt;
         };
         auto isForgeDep = [](toml::table* t) {
             auto mandatory = (*t)["mandatory"].as_boolean();
@@ -250,8 +252,11 @@ ModDetails ReadMCModTOML(QByteArray contents)
             if (!modId || ignoreModIds.contains(QString::fromStdString(modId->get()))) {
                 continue;
             }
-            if (isNeoForgeDep(dep_table) || isForgeDep(dep_table)) {
+            auto type = neoForgeDepType(dep_table);
+            if ((type && *type == "required") || isForgeDep(dep_table)) {
                 details.dependencies.append(QString::fromStdString(modId->get()));
+            } else if (type && *type == "incompatible") {
+                details.breaks.append(QString::fromStdString(modId->get()));
             }
         }
     };
@@ -371,6 +376,19 @@ ModDetails ReadFabricModInfo(QByteArray contents)
                 }
             }
         }
+
+        // "conflicts" is the older spelling of the same thing
+        for (auto key : { "breaks", "conflicts" }) {
+            auto breaks = object.value(key);
+            if (!breaks.isObject()) {
+                continue;
+            }
+            for (auto modId : breaks.toObject().keys()) {
+                if (modId != "fabricloader" && modId != "minecraft" && !modId.startsWith("fabric-")) {
+                    details.breaks.append(modId);
+                }
+            }
+        }
     }
     return details;
 }
@@ -480,6 +498,27 @@ ModDetails ReadQuiltModInfo(QByteArray contents)
                     }
                 }
             }
+
+            // Quilt spells a forbidden mod the same way it spells a required one, only under
+            // another name
+            if (object.contains("breaks")) {
+                auto breaks = object.value("breaks");
+                if (breaks.isArray()) {
+                    for (auto obj : breaks.toArray()) {
+                        QString modId;
+                        if (obj.isString()) {
+                            modId = obj.toString();
+                        } else if (obj.isObject()) {
+                            modId = obj.toObject().value("id").toString();
+                        } else {
+                            continue;
+                        }
+                        if (!modId.isEmpty() && modId != "minecraft" && !modId.startsWith("quilt_")) {
+                            details.breaks.append(modId);
+                        }
+                    }
+                }
+            }
         }
 
     } catch (const Exception& e) {
@@ -571,6 +610,38 @@ bool process(Mod& mod, ProcessingLevel level)
             qWarning() << "Invalid type" << mod.type() << "for mod parse task!";
             return false;
     }
+}
+
+/** The loaders a jar is built for, told from the metadata files it carries.
+ *
+ *  One jar can hold metadata for several loaders at once, so this walks the whole archive rather
+ *  than trusting the single file that happened to be read first. */
+QStringList detectLoaders(const QString& filePath)
+{
+    MMCZip::ArchiveReader zip(filePath);
+
+    QStringList loaders;
+    zip.parse([&loaders](MMCZip::ArchiveReader::File* file, bool&) {
+        auto path = file->filename();
+        if (path == "fabric.mod.json")
+            loaders << "fabric";
+        else if (path == "quilt.mod.json")
+            loaders << "quilt";
+        else if (path == "META-INF/neoforge.mods.toml")
+            loaders << "neoforge";
+        else if (path == "META-INF/mods.toml" || path == "mcmod.info")
+            loaders << "forge";
+        else if (path == "litemod.json")
+            loaders << "liteloader";
+        else if (path == "META-INF/nil/mappings.json")
+            loaders << "nilloader";
+
+        file->skip();
+        return true;
+    });
+
+    loaders.removeDuplicates();
+    return loaders;
 }
 
 bool processZIP(Mod& mod, [[maybe_unused]] ProcessingLevel level)
@@ -671,6 +742,9 @@ bool processZIP(Mod& mod, [[maybe_unused]] ProcessingLevel level)
         isValid = true;
     }
     if (isValid) {
+        details.local_loaders = detectLoaders(mod.fileinfo().filePath());
+        if (details.local_loaders.isEmpty())
+            details.local_loaders = { "java" };
         mod.setDetails(details);
         return true;
     }
@@ -690,6 +764,9 @@ bool processFolder(Mod& mod, [[maybe_unused]] ProcessingLevel level)
         if (data.isEmpty() || data.isNull())
             return false;
         details = ReadMCModInfo(data);
+        details.local_loaders = { "forge" };
+        if (details.local_loaders.isEmpty())
+            details.local_loaders = { "java" };
 
         mod.setDetails(details);
         return true;
@@ -706,6 +783,9 @@ bool processLitemod(Mod& mod, [[maybe_unused]] ProcessingLevel level)
 
     if (auto file = zip.goToFile("litemod.json"); file) {
         details = ReadLiteModInfo(file->readAll());
+        details.local_loaders = { "liteloader" };
+        if (details.local_loaders.isEmpty())
+            details.local_loaders = { "java" };
 
         mod.setDetails(details);
         return true;
