@@ -197,6 +197,19 @@ class ModConflictTest : public QObject {
         QCOMPARE(countOf(ModConflicts::scan(mods, context), ModProblem::Kind::WrongLoader), 1);
     }
 
+    /** A jar that ships no loader metadata at all is a plain one: it does not need Java, and it is
+     *  not told off for having none. */
+    void leavesAPlainJarAlone()
+    {
+        auto mods = QList<ModRecord>{ makeMod("plain", "Plain Jar") };
+        mods[0].loaders = { "java" };
+
+        ModScanContext context;
+        context.loaders = { "neoforge" };
+
+        QVERIFY(ModConflicts::scan(mods, context).isEmpty());
+    }
+
     /** Quilt runs Fabric mods, so a Fabric jar is at home in a Quilt instance. */
     void acceptsFabricModsInAQuiltInstance()
     {
