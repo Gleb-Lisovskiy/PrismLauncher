@@ -666,6 +666,26 @@ static void collectNestedJarIdsAndProvides(ModDetails& details, const QString& f
         if ((name.startsWith("META-INF/jars/") || name.startsWith("META-INF/jarjar/")) && name.endsWith(".jar")) {
             nested.append(name);
         }
+        if (name == "META-INF/jarjar/metadata.json") {
+            QByteArray md = file->readAll();
+            if (!md.isEmpty()) {
+                try {
+                    QJsonDocument doc = QJsonDocument::fromJson(md);
+                    if (doc.isObject()) {
+                        auto jars = doc.object().value("jars");
+                        if (jars.isArray()) {
+                            for (auto v : jars.toArray()) {
+                                if (v.isObject()) {
+                                    QString path = v.toObject().value("path").toString();
+                                    if (!path.isEmpty() && path.endsWith(".jar") && !nested.contains(path))
+                                        nested.append(path);
+                                }
+                            }
+                        }
+                    }
+                } catch (...) {}
+            }
+        }
         file->skip();
         return true;
     });
