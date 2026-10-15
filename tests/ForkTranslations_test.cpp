@@ -48,6 +48,9 @@ class ForkTranslationsCatalog : public QObject {
             { "ResourceDownload::LocalResourcePackPage", "Local Files" },
             { "ResourceDownload::LocalShaderPackPage", "Local Files" },
             { "ResourceDownload::LocalTexturePackPage", "Local Files" },
+            { "ModConflictsDialog", "Check Again" },
+            { "ModConflictsDialog", "\"%1\" needs the mod \"%2\", which is not installed." },
+            { "ExternalResourcesPage", "Check for &Conflicts" },
         };
 
         for (const auto& [context, source] : cases) {
