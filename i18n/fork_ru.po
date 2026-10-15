@@ -30,6 +30,14 @@ msgctxt "EditTemplateDialog"
 msgid "Version:"
 msgstr "Версия:"
 
+msgctxt "ExternalResourcesPage"
+msgid "Check for &Conflicts"
+msgstr "Проверить &конфликты"
+
+msgctxt "ExternalResourcesPage"
+msgid "Look through the mods for missing dependencies and for mods that cannot be loaded together."
+msgstr "Проверить моды на отсутствующие зависимости и на несовместимость друг с другом."
+
 msgctxt "InstanceTemplateStore"
 msgid "Could not copy \"%1\" into the template."
 msgstr "Не удалось скопировать «%1» в шаблон."
@@ -93,6 +101,58 @@ msgstr "Не удалось прочитать %1: %2"
 msgctxt "LocalResourceCopyTask"
 msgid "Could not write %1: %2"
 msgstr "Не удалось записать %1: %2"
+
+msgctxt "ModConflictsDialog"
+msgid "\"%1\" is built for %2, while the instance runs %3."
+msgstr "«%1» собран под %2, а инстанс запускает %3."
+
+msgctxt "ModConflictsDialog"
+msgid "\"%1\" is marked for Minecraft %2, not for %3."
+msgstr "«%1» отмечен для Minecraft %2, а не для %3."
+
+msgctxt "ModConflictsDialog"
+msgid "\"%1\" needs the mod \"%2\", which is not installed."
+msgstr "«%1» требует мод «%2», который не установлен."
+
+msgctxt "ModConflictsDialog"
+msgid "\"%1\" needs the mod \"%2\", which is switched off."
+msgstr "«%1» требует мод «%2», который выключен."
+
+msgctxt "ModConflictsDialog"
+msgid "\"%1\" says it cannot be loaded together with \"%2\"."
+msgstr "«%1» заявляет, что не может работать вместе с «%2»."
+
+msgctxt "ModConflictsDialog"
+msgid "Check Again"
+msgstr "Проверить снова"
+
+msgctxt "ModConflictsDialog"
+msgid "Enabled mods: %1. Nothing looks wrong."
+msgstr "Включённых модов: %1. Ничего подозрительного не видно."
+
+msgctxt "ModConflictsDialog"
+msgid "Mod"
+msgstr "Мод"
+
+msgctxt "ModConflictsDialog"
+msgid "Mod Conflicts"
+msgstr "Конфликты модов"
+
+msgctxt "ModConflictsDialog"
+msgid "More than one switched-on mod claims the id \"%1\": %2"
+msgstr "Идентификатор «%1» заявляют сразу несколько включённых модов: %2"
+
+msgctxt "ModConflictsDialog"
+msgid "Problem"
+msgstr "Проблема"
+
+msgctxt "ModConflictsDialog"
+msgid "Problems found: %1. The ones that stop the game from loading are listed first."
+msgstr "Найдено проблем: %1. Сверху те, из-за которых игра не запустится."
+
+msgctxt "ModConflictsDialog"
+msgid "The mods are still being read, so there may be more to come in a moment."
+msgstr "Моды ещё читаются, так что список может пополниться."
 
 msgctxt "ModFolderPage"
 msgid "Get mods from your local files folder or from online mod platforms"

@@ -25,6 +25,121 @@
     </message>
 </context>
 <context>
+    <name>ExternalResourcesPage</name>
+    <message>
+        <source>Search</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Actions</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>&amp;Add File</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Add a locally downloaded file.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>&amp;Remove</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Remove all selected items.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>&amp;Enable</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Enable all selected items.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>&amp;Disable</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Disable all selected items.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>View &amp;Configs</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Open the &apos;config&apos; folder in the system file manager.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Check for &amp;Conflicts</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Look through the mods for missing dependencies and for mods that cannot be loaded together.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>View &amp;Folder</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Open the folder in the system file manager.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>&amp;Download</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Download resources from online mod platforms.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Check for &amp;Updates</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Try to check or update all selected resources (all resources if none are selected).</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Reset Update Metadata</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Verify Dependencies</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Export List</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Export resource&apos;s metadata to text.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Change Version</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Change a resource&apos;s version.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>View Homepage</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>View the homepages of all selected items.</source>
+        <translation type="unfinished"></translation>
+    </message>
+</context>
+<context>
     <name>InstanceTemplateStore</name>
     <message>
         <source>Could not create the folder for the template&apos;s files.</source>
@@ -344,6 +459,61 @@ Granting %1 access to it via Flatseal is recommended.</source>
     </message>
     <message>
         <source>Could not write %1: %2</source>
+        <translation type="unfinished"></translation>
+    </message>
+</context>
+<context>
+    <name>ModConflictsDialog</name>
+    <message>
+        <source>Mod Conflicts</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Mod</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Problem</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Check Again</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>&quot;%1&quot; needs the mod &quot;%2&quot;, which is not installed.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>&quot;%1&quot; needs the mod &quot;%2&quot;, which is switched off.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>More than one switched-on mod claims the id &quot;%1&quot;: %2</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>&quot;%1&quot; says it cannot be loaded together with &quot;%2&quot;.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>&quot;%1&quot; is built for %2, while the instance runs %3.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>&quot;%1&quot; is marked for Minecraft %2, not for %3.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Enabled mods: %1. Nothing looks wrong.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Problems found: %1. The ones that stop the game from loading are listed first.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>The mods are still being read, so there may be more to come in a moment.</source>
         <translation type="unfinished"></translation>
     </message>
 </context>

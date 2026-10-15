@@ -19,11 +19,14 @@ cd "$(dirname "$0")/.."
     launcher/ui/dialogs/ResourceDownloadDialog.cpp \
     launcher/ui/dialogs/EditTemplateDialog.cpp \
     launcher/ui/dialogs/EditTemplateDialog.ui \
+    launcher/ui/dialogs/ModConflictsDialog.cpp \
+    launcher/ui/dialogs/ModConflictsDialog.ui \
     launcher/ui/dialogs/NewInstanceDialog.cpp \
     launcher/ui/dialogs/SaveTemplateDialog.cpp \
     launcher/ui/dialogs/SaveTemplateDialog.ui \
     launcher/ui/pages/global/LauncherPage.cpp \
     launcher/ui/pages/global/LauncherPage.ui \
+    launcher/ui/pages/instance/ExternalResourcesPage.ui \
     launcher/ui/pages/instance/ModFolderPage.cpp \
     launcher/ui/pages/instance/ResourcePackPage.cpp \
     launcher/ui/pages/instance/ShaderPackPage.cpp \

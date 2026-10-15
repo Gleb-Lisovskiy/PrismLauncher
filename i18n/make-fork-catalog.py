@@ -149,6 +149,34 @@ RU = {
         "Не удалось скопировать «%1» в шаблон.",
     "The templates file is not a JSON object.":
         "Файл шаблонов не является объектом JSON.",
+
+    # --- looking for trouble among the mods ---
+    "Check for &Conflicts": "Проверить &конфликты",
+    "Look through the mods for missing dependencies and for mods that cannot be loaded together.":
+        "Проверить моды на отсутствующие зависимости и на несовместимость друг с другом.",
+    "Mod Conflicts": "Конфликты модов",
+    #: Too generic to translate for the whole launcher, so these are pinned to the dialog's columns.
+    "ModConflictsDialog|Mod": "Мод",
+    "ModConflictsDialog|Problem": "Проблема",
+    "Check Again": "Проверить снова",
+    "Enabled mods: %1. Nothing looks wrong.":
+        "Включённых модов: %1. Ничего подозрительного не видно.",
+    "Problems found: %1. The ones that stop the game from loading are listed first.":
+        "Найдено проблем: %1. Сверху те, из-за которых игра не запустится.",
+    "The mods are still being read, so there may be more to come in a moment.":
+        "Моды ещё читаются, так что список может пополниться.",
+    "\"%1\" needs the mod \"%2\", which is not installed.":
+        "«%1» требует мод «%2», который не установлен.",
+    "\"%1\" needs the mod \"%2\", which is switched off.":
+        "«%1» требует мод «%2», который выключен.",
+    "More than one switched-on mod claims the id \"%1\": %2":
+        "Идентификатор «%1» заявляют сразу несколько включённых модов: %2",
+    "\"%1\" says it cannot be loaded together with \"%2\".":
+        "«%1» заявляет, что не может работать вместе с «%2».",
+    "\"%1\" is built for %2, while the instance runs %3.":
+        "«%1» собран под %2, а инстанс запускает %3.",
+    "\"%1\" is marked for Minecraft %2, not for %3.":
+        "«%1» отмечен для Minecraft %2, а не для %3.",
 }
 
 
