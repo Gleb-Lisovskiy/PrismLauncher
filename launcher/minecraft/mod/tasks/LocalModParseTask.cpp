@@ -906,6 +906,11 @@ bool processZIP(Mod& mod, [[maybe_unused]] ProcessingLevel level)
         if (details.local_loaders.isEmpty())
             details.local_loaders = { "java" };
         collectNestedJarIdsAndProvides(details, mod.fileinfo().filePath());
+        // Known universal/cross-loader mods that ship Fabric metadata but work on other loaders
+        static const QStringList universalCrossLoader = { "xbob_modloader", "customskinloader-bootstrap" };
+        if (universalCrossLoader.contains(details.mod_id)) {
+            details.local_loaders = { "java" };
+        }
         mod.setDetails(details);
         return true;
     }
@@ -933,6 +938,10 @@ bool processZIP(Mod& mod, [[maybe_unused]] ProcessingLevel level)
                 synthetic.mod_id = synthetic.provides.first();
                 synthetic.name = mod.fileinfo().baseName();
                 synthetic.version = "bundled";
+                static const QStringList universalCrossLoader = { "xbob_modloader", "customskinloader-bootstrap" };
+                if (universalCrossLoader.contains(synthetic.mod_id)) {
+                    synthetic.local_loaders = { "java" };
+                }
                 mod.setDetails(synthetic);
                 return true;
             }
@@ -958,6 +967,10 @@ bool processFolder(Mod& mod, [[maybe_unused]] ProcessingLevel level)
         if (details.local_loaders.isEmpty())
             details.local_loaders = { "java" };
         collectNestedJarIdsAndProvides(details, mod.fileinfo().filePath());
+        static const QStringList universalCrossLoader = { "xbob_modloader", "customskinloader-bootstrap" };
+        if (universalCrossLoader.contains(details.mod_id)) {
+            details.local_loaders = { "java" };
+        }
 
         mod.setDetails(details);
         return true;
