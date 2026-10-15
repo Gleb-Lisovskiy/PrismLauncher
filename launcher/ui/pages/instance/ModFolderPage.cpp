@@ -40,6 +40,7 @@
 #include "minecraft/mod/Resource.h"
 #include "ui/dialogs/ExportToModListDialog.h"
 #include "ui/dialogs/InstallLoaderDialog.h"
+#include "ui/dialogs/ModConflictsDialog.h"
 #include "ui_ExternalResourcesPage.h"
 
 #include <QAbstractItemModel>
@@ -110,6 +111,9 @@ ModFolderPage::ModFolderPage(BaseInstance* inst, ModFolderModel* model, QWidget*
     ui->actionsToolbar->insertActionAfter(ui->actionViewHomepage, ui->actionExportMetadata);
 
     ui->actionsToolbar->insertActionAfter(ui->actionViewFolder, ui->actionViewConfigs);
+
+    connect(ui->actionCheckConflicts, &QAction::triggered, this, &ModFolderPage::checkConflicts);
+    ui->actionsToolbar->insertActionAfter(ui->actionUpdateItem, ui->actionCheckConflicts);
 }
 
 bool ModFolderPage::shouldDisplay() const
@@ -365,6 +369,17 @@ void ModFolderPage::exportModMetadata()
     std::ranges::sort(selectedMods, [](const Mod* a, const Mod* b) { return a->name() < b->name(); });
     ExportToModListDialog dlg(m_instance->name(), selectedMods, this);
     dlg.exec();
+}
+
+void ModFolderPage::checkConflicts()
+{
+    if (m_instance->typeName() != "Minecraft") {
+        return;  // this is a null instance or a legacy instance
+    }
+
+    auto* dialog = new ModConflictsDialog(static_cast<MinecraftInstance*>(m_instance), m_model, this);
+    dialog->setAttribute(Qt::WA_DeleteOnClose);
+    dialog->open();
 }
 
 CoreModFolderPage::CoreModFolderPage(BaseInstance* inst, ModFolderModel* mods, QWidget* parent) : ModFolderPage(inst, mods, parent)

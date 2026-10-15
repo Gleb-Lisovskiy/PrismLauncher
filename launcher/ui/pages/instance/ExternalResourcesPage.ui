@@ -136,6 +136,17 @@
     <string>Open the 'config' folder in the system file manager.</string>
    </property>
   </action>
+  <action name="actionCheckConflicts">
+   <property name="text">
+    <string>Check for &amp;Conflicts</string>
+   </property>
+   <property name="toolTip">
+    <string>Look through the mods for missing dependencies and for mods that cannot be loaded together.</string>
+   </property>
+   <property name="menuRole">
+    <enum>QAction::MenuRole::NoRole</enum>
+   </property>
+  </action>
   <action name="actionViewFolder">
    <property name="text">
     <string>View &amp;Folder</string>
