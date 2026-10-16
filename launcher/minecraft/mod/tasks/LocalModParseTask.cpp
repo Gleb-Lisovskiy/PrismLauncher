@@ -70,8 +70,8 @@ ModDetails ReadMCModInfo(QByteArray contents)
         }
 
         auto addDep = [&details](QString dep) {
-            if (dep == "mod_MinecraftForge" || dep == "Forge")
-                return;
+            // Strip FML's version markers and prefixes first: "Forge@[14,)" and "required-after:forge"
+            // are the same pseudo-dependency as plain "Forge", just dressed up differently.
             if (dep.contains(":")) {
                 dep = dep.section(":", 1);
             }
@@ -80,6 +80,15 @@ ModDetails ReadMCModInfo(QByteArray contents)
             }
             if (dep.startsWith("mod_")) {
                 dep = dep.mid(4);
+            }
+            dep = dep.trimmed();
+            if (dep.isEmpty()) {
+                return;
+            }
+            // The loader itself and the game are not mods in the folder, so requiring them proves nothing.
+            static const QStringList providedByLoader = { "forge", "minecraftforge", "minecraft", "java" };
+            if (providedByLoader.contains(dep.toLower())) {
+                return;
             }
             details.dependencies.append(dep);
         };
