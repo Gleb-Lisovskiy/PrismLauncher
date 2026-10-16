@@ -55,7 +55,21 @@ QList<ModLoaderType> modLoaderTypesToList(ModLoaderTypes flags);
 
 enum class ResourceProvider : std::uint8_t { MODRINTH, FLAME };
 
+// <windows.h> (via minwindef.h) defines OPTIONAL as an empty macro, which the preprocessor would
+// expand away here and leave the enum with a stray comma. This header is now reached from others
+// that already pull in Windows headers, so neutralise the macro around the enumerator and put it
+// back for whatever comes after.
+#ifdef OPTIONAL
+#    define PRISM_MODINDEX_OPTIONAL_WAS_DEFINED
+#    undef OPTIONAL
+#endif
+
 enum class DependencyType : std::uint8_t { REQUIRED, OPTIONAL, INCOMPATIBLE, EMBEDDED, TOOL, INCLUDE, UNKNOWN };
+
+#ifdef PRISM_MODINDEX_OPTIONAL_WAS_DEFINED
+#    undef PRISM_MODINDEX_OPTIONAL_WAS_DEFINED
+#    define OPTIONAL
+#endif
 
 enum class Side : std::uint8_t { NoSide = 0, ClientSide = 1U << 0U, ServerSide = 1U << 1U, UniversalSide = ClientSide | ServerSide };
 
