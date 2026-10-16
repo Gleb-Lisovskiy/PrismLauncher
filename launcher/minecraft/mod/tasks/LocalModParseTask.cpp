@@ -813,6 +813,35 @@ QStringList detectLoaders(const QString& filePath)
     return loaders;
 }
 
+/** OptiFine carries no mcmod.info or mods.toml, so it is recognized by the tweaker it ships. Mods
+ *  that depend on it call it "optifine", and without this it would always look like a missing mod. */
+bool isOptiFine(const QString& filePath)
+{
+    MMCZip::ArchiveReader zip(filePath);
+    bool found = false;
+    zip.parse([&found](MMCZip::ArchiveReader::File* file, bool& stop) {
+        const auto path = file->filename();
+        if (path == "optifine/OptiFineForgeTweaker.class" || path == "optifine/OptiFineTweaker.class") {
+            found = true;
+            stop = true;
+        }
+        file->skip();
+        return true;
+    });
+    return found;
+}
+
+/** The version OptiFine puts in its file name, e.g. "1.12.2_HD_U_G5" out of
+ *  "OptiFine_1.12.2_HD_U_G5.jar". Cosmetic only; the scanner never reads it. */
+QString optifineVersionFromFileName(const QString& fileName)
+{
+    int start = fileName.indexOf("optifine", 0, Qt::CaseInsensitive);
+    QString version = start >= 0 ? fileName.mid(start + 8) : fileName;
+    while (version.startsWith('_') || version.startsWith('-'))
+        version.remove(0, 1);
+    return version;
+}
+
 bool processZIP(Mod& mod, [[maybe_unused]] ProcessingLevel level)
 {
     ModDetails details;
@@ -920,6 +949,16 @@ bool processZIP(Mod& mod, [[maybe_unused]] ProcessingLevel level)
         if (universalCrossLoader.contains(details.mod_id)) {
             details.local_loaders = { "java" };
         }
+        mod.setDetails(details);
+        return true;
+    }
+    // OptiFine has no metadata file to read, so give it the identity other mods know it by.
+    if (isOptiFine(mod.fileinfo().filePath())) {
+        details = {};
+        details.mod_id = "optifine";
+        details.name = "OptiFine";
+        details.version = optifineVersionFromFileName(mod.fileinfo().completeBaseName());
+        details.local_loaders = { "forge" };
         mod.setDetails(details);
         return true;
     }
