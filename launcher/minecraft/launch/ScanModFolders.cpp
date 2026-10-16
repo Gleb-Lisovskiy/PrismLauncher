@@ -66,18 +66,24 @@ void ScanModFolders::executeTask()
 
 void ScanModFolders::modsDone()
 {
+    // This step is done once each folder has reported in. Anything that finishes a folder scan
+    // later on (opening the mods page, for instance) must not reach us again, or we would report
+    // success a second time.
+    disconnect(sender(), nullptr, this, nullptr);
     m_modsDone = true;
     checkDone();
 }
 
 void ScanModFolders::coreModsDone()
 {
+    disconnect(sender(), nullptr, this, nullptr);
     m_coreModsDone = true;
     checkDone();
 }
 
 void ScanModFolders::nilModsDone()
 {
+    disconnect(sender(), nullptr, this, nullptr);
     m_nilModsDone = true;
     checkDone();
 }
