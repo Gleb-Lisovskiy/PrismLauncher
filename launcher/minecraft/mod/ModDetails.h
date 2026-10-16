@@ -151,6 +151,11 @@ struct ModDetails {
      *  not say. */
     QStringList local_loaders = {};
 
+    /** The game versions the jar's own metadata says it works with, spelled the way that metadata
+     *  spelled them: a plain version ("1.20.1"), a wildcard ("1.20.x") or a constraint
+     *  ("[1.20.1,1.21)" or "~1.20.1"). Empty when the metadata does not say. */
+    QStringList game_versions = {};
+
     ModDetails() = default;
 
     /** Metadata should be handled manually to properly set the mod status. */
@@ -169,6 +174,7 @@ struct ModDetails {
         , breaks(other.breaks)
         , provides(other.provides)
         , local_loaders(other.local_loaders)
+        , game_versions(other.game_versions)
     {}
 
     ModDetails& operator=(const ModDetails& other) = default;

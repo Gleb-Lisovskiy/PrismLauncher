@@ -286,6 +286,97 @@ class ModConflictTest : public QObject {
         QCOMPARE(problems.first().note, QStringLiteral("1.19.2"));
     }
 
+    /** Forge and NeoForge write the game versions a mod accepts as a Maven range. */
+    void readsAGameVersionRange()
+    {
+        auto mods = QList<ModRecord>{ makeMod("create", "Create") };
+        mods[0].gameVersions = { "[1.20.1,1.21)" };
+
+        ModScanContext context;
+        context.gameVersion = "1.21.1";
+
+        const auto problems = ModConflicts::scan(mods, context);
+
+        QCOMPARE(problems.size(), 1);
+        QVERIFY(problems.first().kind == ModProblem::Kind::WrongGameVersion);
+        QCOMPARE(problems.first().other, QStringLiteral("1.21.1"));
+        QCOMPARE(problems.first().note, QStringLiteral("[1.20.1,1.21)"));
+    }
+
+    /** The other half of that: a version inside the range is not a problem. */
+    void acceptsAVersionInsideTheRange()
+    {
+        auto mods = QList<ModRecord>{ makeMod("create", "Create") };
+        mods[0].gameVersions = { "[1.20.1,1.21)" };
+
+        ModScanContext context;
+        context.gameVersion = "1.20.4";
+
+        QVERIFY(ModConflicts::scan(mods, context).isEmpty());
+    }
+
+    /** Fabric writes it as a tilde constraint, and "~1.20.1" means the 1.20 line, not just 1.20.1.
+     *  This is the shape a mod built for 1.20.1 carries when it is dropped into a 1.21.1 instance. */
+    void readsATildeConstraint()
+    {
+        auto mods = QList<ModRecord>{ makeMod("mappet", "ShortMappet") };
+        mods[0].gameVersions = { "~1.20.1" };
+
+        ModScanContext context;
+        context.gameVersion = "1.20.4";
+        QVERIFY(ModConflicts::scan(mods, context).isEmpty());
+
+        context.gameVersion = "1.21.1";
+        QCOMPARE(countOf(ModConflicts::scan(mods, context), ModProblem::Kind::WrongGameVersion), 1);
+    }
+
+    void readsAWildcardConstraint()
+    {
+        auto mods = QList<ModRecord>{ makeMod("create", "Create") };
+        mods[0].gameVersions = { "1.20.x" };
+
+        ModScanContext context;
+        context.gameVersion = "1.20.4";
+        QVERIFY(ModConflicts::scan(mods, context).isEmpty());
+
+        context.gameVersion = "1.21.1";
+        QCOMPARE(countOf(ModConflicts::scan(mods, context), ModProblem::Kind::WrongGameVersion), 1);
+    }
+
+    /** An open-ended range is what a mod that keeps working across versions writes, and it must not
+     *  be called a mismatch. */
+    void acceptsAnOpenEndedRange()
+    {
+        auto mods = QList<ModRecord>{ makeMod("create", "Create") };
+        mods[0].gameVersions = { ">=1.20.1" };
+
+        ModScanContext context;
+        context.gameVersion = "1.21.1";
+
+        QVERIFY(ModConflicts::scan(mods, context).isEmpty());
+    }
+
+    /** A mod packaged for several game versions lists them all, and any one of them will do. */
+    void acceptsAnyOfTheVersionsTheMetadataLists()
+    {
+        auto mods = QList<ModRecord>{ makeMod("create", "Create") };
+        mods[0].gameVersions = { "1.20.1", "1.20.2" };
+
+        ModScanContext context;
+        context.gameVersion = "1.20.2";
+
+        QVERIFY(ModConflicts::scan(mods, context).isEmpty());
+    }
+
+    /** Nothing is said about a mod when the instance's own game version could not be worked out. */
+    void staysQuietWhenTheGameVersionIsNotKnown()
+    {
+        auto mods = QList<ModRecord>{ makeMod("create", "Create") };
+        mods[0].gameVersions = { "1.20.1" };
+
+        QVERIFY(ModConflicts::scan(mods, ModScanContext{}).isEmpty());
+    }
+
     /** A missing dependency will stop the game, a mod built for another loader may well not, and
      *  the list is meant to be read from the top. */
     void putsTheThingsThatStopTheGameFirst()

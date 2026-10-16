@@ -10,6 +10,8 @@
 
 namespace ModUtils {
 
+ModDetails ReadMCModInfo(QByteArray contents);
+ModDetails ReadMCModTOML(QByteArray contents);
 ModDetails ReadFabricModInfo(QByteArray contents);
 ModDetails ReadQuiltModInfo(QByteArray contents);
 ModDetails ReadForgeInfo(QByteArray contents);

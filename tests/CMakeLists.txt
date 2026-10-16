@@ -82,6 +82,9 @@ ecm_add_test(LocalResourceCopy_test.cpp LINK_LIBRARIES Launcher_logic Qt${QT_VER
 ecm_add_test(ModConflict_test.cpp LINK_LIBRARIES Launcher_logic Qt${QT_VERSION_MAJOR}::Test
     TEST_NAME ModConflict)
 
+ecm_add_test(ModParse_test.cpp LINK_LIBRARIES Launcher_logic Qt${QT_VERSION_MAJOR}::Test
+    TEST_NAME ModParse)
+
 ecm_add_test(ForkTranslations_test.cpp LINK_LIBRARIES Launcher_logic Qt${QT_VERSION_MAJOR}::Test
     TEST_NAME ForkTranslationsCatalog)
 foreach(catalog ${Launcher_Fork_Translations})

@@ -7,9 +7,11 @@
 #include <algorithm>
 
 #include <QHash>
+#include <QRegularExpression>
 #include <QSet>
 
 #include "Mod.h"
+#include "Version.h"
 
 namespace {
 
@@ -57,6 +59,145 @@ QString pairKey(const QString& left, const QString& right)
     return left < right ? left + '\n' + right : right + '\n' + left;
 }
 
+/** Compares two Minecraft-like versions, using the same ordering the launcher uses for versions. */
+int compareVersions(const QString& left, const QString& right)
+{
+    const auto order = Version(left) <=> Version(right);
+    return order < 0 ? -1 : (order > 0 ? 1 : 0);
+}
+
+QStringList versionParts(const QString& version)
+{
+    return version.split('.', Qt::SkipEmptyParts);
+}
+
+/** Whether a plain version covers the one the instance runs. A part the metadata spells out has to
+ *  match, a wildcard part ("x" or "*") stands for anything, and a version the metadata cuts short
+ *  ("1.20" for "1.20.1") is read as the start of that line. */
+bool plainVersionCovers(const QString& wanted, const QString& gameVersion)
+{
+    const auto wantedParts = versionParts(wanted);
+    const auto actualParts = versionParts(gameVersion);
+    if (wantedParts.isEmpty())
+        return true;
+
+    for (int i = 0; i < wantedParts.size(); ++i) {
+        const auto part = wantedParts.at(i).trimmed().toLower();
+        if (part.isEmpty() || part == "x" || part == "*")
+            continue;
+        if (i >= actualParts.size() || part != actualParts.at(i).trimmed().toLower())
+            return false;
+    }
+    return true;
+}
+
+/** The first version that is past the line a constraint starting at \a version covers, for the
+ *  part at \a index: "1.20.1" with index 1 becomes "1.21.0". */
+QString versionPast(const QString& version, int index)
+{
+    auto parts = versionParts(version);
+    if (index >= parts.size())
+        return {};
+
+    bool ok = false;
+    const auto number = parts.at(index).toInt(&ok);
+    if (!ok)
+        return {};
+
+    parts[index] = QString::number(number + 1);
+    for (int i = index + 1; i < parts.size(); ++i)
+        parts[i] = "0";
+    return parts.join('.');
+}
+
+/** Whether one version the metadata wrote down covers the one the instance runs.
+ *
+ *  Every loader spells this out differently: a plain version ("1.20.1"), a wildcard ("1.20.x"), a
+ *  Maven range ("[1.20.1,1.21)"), a tilde or caret constraint ("~1.20.1"), or a set of comparisons
+ *  (">=1.20.1 <1.21"). Anything that cannot be read as one of those is taken to cover the version,
+ *  because refusing to answer is not the same as answering "no". */
+bool coversGameVersion(const QString& expression, const QString& gameVersion)
+{
+    const auto trimmed = expression.simplified();
+    if (trimmed.isEmpty())
+        return true;
+
+    // Fabric spells "either of these" with "||".
+    const auto alternatives = trimmed.split(QLatin1String("||"), Qt::SkipEmptyParts);
+    if (alternatives.size() > 1) {
+        return std::any_of(alternatives.begin(), alternatives.end(),
+                           [&gameVersion](const QString& alternative) { return coversGameVersion(alternative, gameVersion); });
+    }
+
+    // Maven ranges: "[1.20.1,1.21)" holds 1.20.1 but not 1.21.
+    const bool opensRange = trimmed.startsWith('[') || trimmed.startsWith('(');
+    const bool closesRange = trimmed.endsWith(']') || trimmed.endsWith(')');
+    if (opensRange && closesRange && trimmed.size() > 2) {
+        const auto bounds = trimmed.mid(1, trimmed.size() - 2).split(',');
+        const auto lower = bounds.value(0).trimmed();
+        const auto upper = bounds.value(1).trimmed();
+
+        if (!lower.isEmpty()) {
+            const int order = compareVersions(gameVersion, lower);
+            if (order < 0 || (order == 0 && !trimmed.startsWith('[')))
+                return false;
+        }
+        // A bound with a wildcard in it cannot be ordered, so only the lower one is asked about.
+        const bool upperIsWild = upper.contains('x') || upper.contains('X') || upper.contains('*');
+        if (!upper.isEmpty() && !upperIsWild) {
+            const int order = compareVersions(gameVersion, upper);
+            if (order > 0 || (order == 0 && !trimmed.endsWith(']')))
+                return false;
+        }
+        return true;
+    }
+
+    // Comparisons and plain versions can be listed together, separated by spaces or commas.
+    // ">=1.20.1 <1.21" and "1.20.x" are the same idea written differently.
+    const auto tokens = trimmed.split(QRegularExpression("[\\s,]+"), Qt::SkipEmptyParts);
+    return std::all_of(tokens.begin(), tokens.end(), [&gameVersion](const QString& token) {
+        // Longest operator first, so ">=" is not read as ">".
+        static const QStringList operators = { ">=", "<=", ">", "<", "=", "~", "^" };
+        for (const auto& op : operators) {
+            if (!token.startsWith(op))
+                continue;
+
+            const auto version = token.mid(op.size()).trimmed();
+            if (version.isEmpty())
+                return true;
+            if (op == ">=")
+                return compareVersions(gameVersion, version) >= 0;
+            if (op == "<=")
+                return compareVersions(gameVersion, version) <= 0;
+            if (op == ">")
+                return compareVersions(gameVersion, version) > 0;
+            if (op == "<")
+                return compareVersions(gameVersion, version) < 0;
+            if (op == "=")
+                return compareVersions(gameVersion, version) == 0;
+
+            // "~1.20.1" covers the 1.20 line and "^1.20.1" everything up to the next major
+            // version, the way npm reads them.
+            const auto parts = versionParts(version);
+            const auto ceiling = versionPast(version, (op == "~" && parts.size() > 1) ? 1 : 0);
+            if (ceiling.isEmpty())
+                return true;
+            if (compareVersions(gameVersion, version) < 0)
+                return false;
+            return compareVersions(gameVersion, ceiling) < 0;
+        }
+
+        return plainVersionCovers(token, gameVersion);
+    });
+}
+
+/** Whether any of the versions a mod declares covers the one the instance runs. */
+bool anyCoversGameVersion(const QStringList& versions, const QString& gameVersion)
+{
+    return std::any_of(versions.begin(), versions.end(),
+                       [&gameVersion](const QString& version) { return coversGameVersion(version, gameVersion); });
+}
+
 }  // namespace
 
 ModRecord ModConflicts::recordFrom(const Mod& mod)
@@ -81,6 +222,11 @@ ModRecord ModConflicts::recordFrom(const Mod& mod)
         }
         record.gameVersions = metadata->mcVersions;
     }
+
+    // A jar that was not downloaded from a platform still knows which versions it was built for,
+    // so fall back on what its own metadata says.
+    if (record.gameVersions.isEmpty())
+        record.gameVersions = mod.details().game_versions;
 
     return record;
 }
@@ -298,7 +444,7 @@ QList<ModProblem> ModConflicts::scan(const QList<ModRecord>& mods, const ModScan
 
     if (!context.gameVersion.isEmpty()) {
         for (const auto& mod : mods) {
-            if (!mod.enabled || mod.gameVersions.isEmpty() || mod.gameVersions.contains(context.gameVersion))
+            if (!mod.enabled || mod.gameVersions.isEmpty() || anyCoversGameVersion(mod.gameVersions, context.gameVersion))
                 continue;
 
             ModProblem problem;

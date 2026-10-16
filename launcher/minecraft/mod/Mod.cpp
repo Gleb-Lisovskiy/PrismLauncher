@@ -202,7 +202,8 @@ auto Mod::mcVersions() const -> QString
     if (metadata())
         return metadata()->mcVersions.join(", ");
 
-    return {};
+    // A jar that was not downloaded from a platform still says which versions it was built for.
+    return details().game_versions.join(", ");
 }
 
 auto Mod::releaseType() const -> QString

@@ -22,6 +22,34 @@ static const QRegularExpression s_newlineRegex("\r\n|\n|\r");
 
 namespace ModUtils {
 
+namespace {
+
+/** Records a game version the metadata spelled out, dropping the placeholders that a mod built
+ *  from unprocessed sources leaves behind ("${mcversion}"). */
+void appendGameVersion(QStringList& versions, const QString& raw)
+{
+    const auto version = raw.trimmed();
+    if (version.isEmpty() || version.contains('$') || version.contains('{'))
+        return;
+    if (!versions.contains(version))
+        versions.append(version);
+}
+
+/** The same, for the shapes Fabric and Quilt write it in: one version, or a list to choose from. */
+void appendGameVersions(QStringList& versions, const QJsonValue& value)
+{
+    if (value.isString()) {
+        appendGameVersion(versions, value.toString());
+    } else if (value.isArray()) {
+        for (const auto& entry : value.toArray()) {
+            if (entry.isString())
+                appendGameVersion(versions, entry.toString());
+        }
+    }
+}
+
+}  // namespace
+
 // NEW format
 // https://github.com/MinecraftForge/FML/wiki/FML-mod-information-file/c8d8f1929aff9979e322af79a59ce81f3e02db6a
 
@@ -42,6 +70,7 @@ ModDetails ReadMCModInfo(QByteArray contents)
             details.name = name;
         }
         details.version = firstObj.value("version").toString();
+        appendGameVersions(details.game_versions, firstObj.value("mcversion"));
         auto homeurl = firstObj.value("url").toString().trimmed();
         if (!homeurl.isEmpty()) {
             // fix up url.
@@ -260,14 +289,27 @@ ModDetails ReadMCModTOML(QByteArray contents)
                 continue;
             }
             auto modId = (*dep_table)["modId"].as_string();
-            if (!modId || ignoreModIds.contains(QString::fromStdString(modId->get()))) {
+            if (!modId) {
+                continue;
+            }
+            const auto id = QString::fromStdString(modId->get());
+            // The range a mod gives for Minecraft is the only thing in here that says which game
+            // versions it can be loaded into, so it is kept rather than filtered out with the rest
+            // of the pseudo-dependencies.
+            if (id.compare("minecraft", Qt::CaseInsensitive) == 0) {
+                if (auto versionRange = (*dep_table)["versionRange"].as_string()) {
+                    appendGameVersion(details.game_versions, QString::fromStdString(versionRange->get()));
+                }
+                continue;
+            }
+            if (ignoreModIds.contains(id)) {
                 continue;
             }
             auto type = neoForgeDepType(dep_table);
             if ((type && *type == "required") || isForgeDep(dep_table)) {
-                details.dependencies.append(QString::fromStdString(modId->get()));
+                details.dependencies.append(id);
             } else if (type && *type == "incompatible") {
-                details.breaks.append(QString::fromStdString(modId->get()));
+                details.breaks.append(id);
             }
         }
     };
@@ -389,7 +431,13 @@ ModDetails ReadFabricModInfo(QByteArray contents)
             if (depends.isObject()) {
                 auto obj = depends.toObject();
                 for (auto key : obj.keys()) {
-                    if (key != "fabricloader" && key != "minecraft" && key != "java" && !key.startsWith("fabric-")) {
+                    // Fabric spells the game version the mod wants as a dependency on "minecraft";
+                    // "~1.20.1" and ">=1.20.1" both turn up here.
+                    if (key == "minecraft") {
+                        appendGameVersions(details.game_versions, obj.value(key));
+                        continue;
+                    }
+                    if (key != "fabricloader" && key != "java" && !key.startsWith("fabric-")) {
                         details.dependencies.append(key);
                     }
                 }
@@ -525,6 +573,10 @@ ModDetails ReadQuiltModInfo(QByteArray contents)
                             if (objValue.contains("optional") && objValue.value("optional").toBool()) {
                                 continue;
                             }
+                            if (modId == "minecraft") {
+                                appendGameVersions(details.game_versions, objValue.value("versions"));
+                                continue;
+                            }
                         } else {
                             continue;
                         }
@@ -616,6 +668,7 @@ ModDetails ReadLiteModInfo(QByteArray contents)
         details.version = object.value("revision").toString("");
     }
     details.mcversion = object.value("mcversion").toString();
+    appendGameVersion(details.game_versions, details.mcversion);
     auto author = object.value("author").toString();
     if (!author.isEmpty()) {
         details.authors.append(author);
