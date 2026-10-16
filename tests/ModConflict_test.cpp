@@ -93,6 +93,25 @@ class ModConflictTest : public QObject {
         QVERIFY(ModConflicts::scan(mods, ModScanContext{}).isEmpty());
     }
 
+    /** Forge mod ids are matched without regard to case, so "Optifine" finds "optifine". */
+    void matchesADependencyWhateverItsCase()
+    {
+        auto mods = QList<ModRecord>{ makeMod("advancedshader", "AdvancedShader"), makeMod("optifine", "OptiFine") };
+        mods[0].dependencies = { "Optifine" };
+
+        QVERIFY(ModConflicts::scan(mods, ModScanContext{}).isEmpty());
+    }
+
+    void matchesAProvidedIdWhateverItsCase()
+    {
+        auto mods = QList<ModRecord>{ makeMod("advancedshader", "AdvancedShader"), makeMod("optifine", "OptiFine") };
+        mods[0].dependencies = { "Optifine" };
+        mods[1].provides = { "optifine" };
+        mods[1].id = "of";
+
+        QVERIFY(ModConflicts::scan(mods, ModScanContext{}).isEmpty());
+    }
+
     void ignoresAModDependingOnItself()
     {
         auto mods = QList<ModRecord>{ makeMod("create") };

@@ -100,14 +100,16 @@ QList<ModProblem> ModConflicts::scan(const QList<ModRecord>& mods, const ModScan
 {
     QList<ModProblem> problems;
 
+    // Mod ids are matched the way the game matches them: without regard to case. A dependency on
+    // "Optifine" is satisfied by a mod whose id is "optifine".
     QHash<QString, QList<const ModRecord*>> byId;
     for (const auto& mod : mods) {
         if (!mod.id.isEmpty())
-            byId[mod.id].append(&mod);
+            byId[mod.id.toLower()].append(&mod);
     }
 
     auto disabledWithId = [&byId](const QString& id) -> const ModRecord* {
-        for (const auto* mod : byId.value(id)) {
+        for (const auto* mod : byId.value(id.toLower())) {
             if (!mod->enabled)
                 return mod;
         }
@@ -115,7 +117,7 @@ QList<ModProblem> ModConflicts::scan(const QList<ModRecord>& mods, const ModScan
     };
 
     auto enabledWithId = [&byId](const QString& id) -> const ModRecord* {
-        for (const auto* mod : byId.value(id)) {
+        for (const auto* mod : byId.value(id.toLower())) {
             if (mod->enabled)
                 return mod;
         }
@@ -128,12 +130,12 @@ QList<ModProblem> ModConflicts::scan(const QList<ModRecord>& mods, const ModScan
             continue;
         for (const auto& provided : mod.provides) {
             if (!provided.isEmpty())
-                byProvided[provided].append(&mod);
+                byProvided[provided.toLower()].append(&mod);
         }
     }
 
     auto enabledProviding = [&byProvided](const QString& id) -> const ModRecord* {
-        for (const auto* mod : byProvided.value(id)) {
+        for (const auto* mod : byProvided.value(id.toLower())) {
             if (mod->enabled)
                 return mod;
         }
@@ -141,7 +143,7 @@ QList<ModProblem> ModConflicts::scan(const QList<ModRecord>& mods, const ModScan
     };
 
     auto disabledProviding = [&byProvided](const QString& id) -> const ModRecord* {
-        for (const auto* mod : byProvided.value(id)) {
+        for (const auto* mod : byProvided.value(id.toLower())) {
             if (!mod->enabled)
                 return mod;
         }
@@ -190,7 +192,7 @@ QList<ModProblem> ModConflicts::scan(const QList<ModRecord>& mods, const ModScan
         problem.kind = ModProblem::Kind::DuplicateModId;
         problem.severity = ModProblem::Severity::Error;
         problem.modName = labelOf(*first);
-        problem.modId = it.key();
+        problem.modId = first->id;
         problem.fileName = first->fileName;
         problem.note = jars.join(", ");
         problems.append(problem);
