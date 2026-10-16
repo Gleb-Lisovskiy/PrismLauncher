@@ -1018,9 +1018,9 @@ bool processZIP(Mod& mod, [[maybe_unused]] ProcessingLevel level)
     // Fallback: if the jar only bundles mods via jarjar and has no root metadata, synthesize a mod
     // that provides the nested mod IDs so dependency checks work.
     {
-        MMCZip::ArchiveReader zip(mod.fileinfo().filePath());
+        MMCZip::ArchiveReader bundleZip(mod.fileinfo().filePath());
         bool hasJarJar = false;
-        zip.parse([&hasJarJar](MMCZip::ArchiveReader::File* file, bool&) {
+        bundleZip.parse([&hasJarJar](MMCZip::ArchiveReader::File* file, bool&) {
             QString name = file->filename();
             if (name == "META-INF/jarjar/metadata.json" || ((name.startsWith("META-INF/jars/") || name.startsWith("META-INF/jarjar/")) && name.endsWith(".jar"))) {
                 hasJarJar = true;

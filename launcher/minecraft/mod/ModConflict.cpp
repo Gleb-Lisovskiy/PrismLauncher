@@ -304,7 +304,7 @@ QList<ModProblem> ModConflicts::scan(const QList<ModRecord>& mods, const ModScan
         return false;
     };
 
-    auto satisfiesDisabled = [&enabledWithId, &enabledProviding, &disabledWithId, &disabledProviding](const QString& id) -> const ModRecord* {
+    auto satisfiesDisabled = [&disabledWithId, &disabledProviding](const QString& id) -> const ModRecord* {
         if (const auto* d = disabledWithId(id)) return d;
         if (const auto* d = disabledProviding(id)) return d;
         return nullptr;
