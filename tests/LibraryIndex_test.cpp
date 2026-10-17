@@ -155,7 +155,9 @@ class LibraryIndexTest : public QObject {
         LibraryIndex reopened(lib.rootDir());
         QVERIFY(reopened.rescan());
         QCOMPARE(reopened.size(), 1);
-        const auto& reread = reopened.entries().first();
+        // entries() hands back a copy, so the entry has to be taken by value: binding a reference
+        // to an element of the temporary would leave it dangling the moment the statement ends.
+        const auto reread = reopened.entries().first();
         QVERIFY(reread.origin.isValid());
         QCOMPARE(reread.origin.provider, ModPlatform::ResourceProvider::MODRINTH);
         QCOMPARE(reread.origin.projectId, QString("AANobbMI"));
@@ -317,7 +319,7 @@ class LibraryIndexTest : public QObject {
         QVERIFY(lib.rescan());
         QCOMPARE(lib.size(), 1);
 
-        const auto& entry = lib.entries().first();
+        const auto entry = lib.entries().first();
         QCOMPARE(entry.type, LibraryIndex::Type::Mod);
         QCOMPARE(entry.file, QString("inbox/build-42.jar"));
         QCOMPARE(entry.details.mod_id, QString("examplemod"));
@@ -366,7 +368,7 @@ class LibraryIndexTest : public QObject {
         QVERIFY(reopened.rescan());
         QCOMPARE(reopened.size(), 1);
 
-        const auto& entry = reopened.entries().first();
+        const auto entry = reopened.entries().first();
         QVERIFY(entry.origin.isValid());
         QCOMPARE(entry.origin.provider, ModPlatform::ResourceProvider::MODRINTH);
         QCOMPARE(entry.origin.projectId, QString("AANobbMI"));
@@ -386,7 +388,7 @@ class LibraryIndexTest : public QObject {
         QVERIFY(reopened.rescan());
         QCOMPARE(reopened.size(), 1);
 
-        const auto& entry = reopened.entries().first();
+        const auto entry = reopened.entries().first();
         QVERIFY(!entry.origin.isValid());
         QCOMPARE(entry.notes, QString("Just a description.\nSecond line."));
     }
@@ -464,7 +466,7 @@ class LibraryIndexTest : public QObject {
         QVERIFY(lib.rescan());
         QCOMPARE(lib.size(), 1);
 
-        const auto& entry = lib.entries().first();
+        const auto entry = lib.entries().first();
         QCOMPARE(entry.details.mod_id, QString("examplemod"));
         QCOMPARE(entry.details.version, QString("4.2.0"));
         QCOMPARE(entry.details.name, QString("Example Mod"));
