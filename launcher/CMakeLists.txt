@@ -1444,9 +1444,8 @@ endif()
 
 # The fork's own translations. They are copied next to the executable rather than installed into a
 # shared data directory, because they are read relative to the binary and have to be found in a
-# build tree as readily as in an installed one.
-file(GLOB Launcher_Fork_Translations "${CMAKE_CURRENT_SOURCE_DIR}/../i18n/fork_*.po")
-
+# build tree as readily as in an installed one. The list is built at the top level so the tests can
+# use it too; see the comment there.
 add_executable(${Launcher_Name} MACOSX_BUNDLE WIN32 main.cpp ${LAUNCHER_RCS})
 
 if(${Launcher_USE_PCH})

@@ -87,6 +87,9 @@ ecm_add_test(ModParse_test.cpp LINK_LIBRARIES Launcher_logic Qt${QT_VERSION_MAJO
 
 ecm_add_test(ForkTranslations_test.cpp LINK_LIBRARIES Launcher_logic Qt${QT_VERSION_MAJOR}::Test
     TEST_NAME ForkTranslationsCatalog)
+# The test reads the catalog from next to its own binary, which is not where the launcher puts it on
+# macOS (that one is inside the bundle), so a copy is laid down here too. The list is built at the top
+# level because the launcher, which is added after this subdirectory, uses it as well.
 foreach(catalog ${Launcher_Fork_Translations})
     add_custom_command(TARGET ForkTranslationsCatalog POST_BUILD
         COMMAND ${CMAKE_COMMAND} -E make_directory "$<TARGET_FILE_DIR:ForkTranslationsCatalog>/translations"

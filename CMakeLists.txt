@@ -500,6 +500,12 @@ add_subdirectory(libraries/qdcss) # css parser
 
 add_subdirectory(buildconfig)
 
+# The fork's own translation catalogs. They are read relative to the executable, so both the
+# launcher that ships them and the test that checks they were laid down next to it need the list.
+# It is built here, at the top level, because the tests subdirectory is added before the launcher's
+# and would otherwise not see the variable at all.
+file(GLOB Launcher_Fork_Translations "${CMAKE_CURRENT_SOURCE_DIR}/i18n/fork_*.po")
+
 if(BUILD_TESTING)
     add_subdirectory(tests)
 endif()
