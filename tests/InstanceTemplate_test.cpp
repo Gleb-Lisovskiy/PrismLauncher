@@ -134,14 +134,20 @@ void InstanceTemplateTest::contentFilesPutsFoldersFirst()
     QVERIFY(writeFile(FS::PathCombine(root, "beta", "inside.txt"), QByteArrayLiteral("b")));
     QVERIFY(writeFile(FS::PathCombine(root, "mods", "sodium.jar"), QByteArrayLiteral("c")));
     QVERIFY(QDir().mkpath(FS::PathCombine(root, "zeta")));
-    // A hidden entry is not something the launcher's lists show, so the scan skips it too.
-    QVERIFY(writeFile(FS::PathCombine(root, ".hidden"), QByteArrayLiteral("h")));
+    // A leading dot marks a hidden entry on Unix and the launcher's lists leave hidden entries out,
+    // so the scan does too. Whether this one actually counts as hidden is a platform question and
+    // is settled below, because Windows hides by attribute rather than by a dotted name.
+    const QString dotted = QStringLiteral(".hidden");
+    QVERIFY(writeFile(FS::PathCombine(root, dotted), QByteArrayLiteral("h")));
 
     const auto files = InstanceTemplate::contentFiles(root);
 
     QStringList paths;
     for (const auto& file : files)
         paths << (file.isDir ? file.path + QLatin1Char('/') : file.path);
+
+    if (!QFileInfo(FS::PathCombine(root, dotted)).isHidden())
+        QVERIFY(paths.removeOne(dotted));  // Not hidden here, so it is an ordinary file the scan lists.
 
     // Folders first in name order, then files, with each folder followed by what is inside it.
     QCOMPARE(paths, QStringList({ QStringLiteral("beta/"), QStringLiteral("beta/inside.txt"), QStringLiteral("mods/"),
